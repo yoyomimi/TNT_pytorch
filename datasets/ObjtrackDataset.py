@@ -73,7 +73,7 @@ class ObjtrackDataset(Dataset):
                         info = img_infos[frames_dir][int(frame_id)]
                         info['ann']['track_id'] = np.append(info['ann']['track_id'], int(labels[1]))
                         info['ann']['bboxes'] = np.vstack((info['ann']['bboxes'], np.array(labels[6:10], dtype=np.float32)))
-                        info['ann']['labels'] = np.append(info['ann']['labels'], int(self.class_dict[labels[2]]))
+                        info['ann']['labels'] = np.append(info['ann']['labels'], int(self.class_dict[labels[2]]+1))
                         info['ann']['truncated'] = np.append(info['ann']['truncated'], int(labels[3]))
                         info['ann']['occluded'] = np.append(info['ann']['occluded'], int(labels[4]))
                         info['ann']['alpha'] = np.append(info['ann']['alpha'], float(labels[5]))
@@ -88,7 +88,7 @@ class ObjtrackDataset(Dataset):
                         info['ann'] = dict(
                             track_id=np.array(labels[1], dtype=np.int64),
                             bboxes=np.array(labels[6:10], dtype=np.float32),
-                            labels=np.array(self.class_dict[labels[2]], dtype=np.int64),                           
+                            labels=np.array(self.class_dict[labels[2]]+1, dtype=np.int64),                           
                             truncated=np.array(labels[3], dtype=np.int64),
                             occluded=np.array(labels[4], dtype=np.int64),
                             alpha=np.array(labels[5], dtype=np.float32),

@@ -15,8 +15,7 @@ import _init_paths
 from configs import cfg
 from configs import update_config
 
-from datasets.data_collate import detection_collate
-from datasets.data_collate import identify_collate
+from datasets.data_collect import objtrack_collect
 from detection.trainer.identifier_trainer import IdentifierTrainer
 from utils.utils import create_logger
 from utils.utils import get_model
@@ -29,14 +28,12 @@ from utils.utils import get_identifier_trainer_args
 from utils.utils import load_checkpoint
 
 
-
-
 def parse_args():
-    parser = argparse.ArgumentParser(description='Kongke Task')
+    parser = argparse.ArgumentParser(description='Objtrack Det Task')
     parser.add_argument(
         '--cfg',
         dest='yaml_file',
-        help='experiment configure file name, e.g. configs/kongke_fcos_createBG.yaml ',
+        help='experiment configure file name, e.g. configs/fcos_detector.yaml ',
         required=True,
         type=str)
     
@@ -92,16 +89,11 @@ def main_per_worker(process_index, ngpus_per_node, args):
     logger.info(pprint.pformat(args))
     logger.info(cfg)
 
-    if cfg.IDENTIFIER.IS_TRAIN:
-        model = get_model(cfg, cfg.IDENTIFIER.FILE, cfg.IDENTIFIER.NAME) 
-        train_dataset, eval_dataset = get_dataset(cfg, is_ident=True) 
-
-    else:
-        model = get_model(cfg, cfg.MODEL.FILE, cfg.MODEL.NAME)  
-        optimizer = get_optimizer(cfg, model)
-        model, optimizer, last_iter = load_checkpoint(cfg, model, optimizer)
-        lr_scheduler = get_lr_scheduler(cfg, optimizer, last_iter)
-        train_dataset, eval_dataset = get_dataset(cfg)
+    model = get_model(cfg, cfg.MODEL.FILE, cfg.MODEL.NAME)  
+    optimizer = get_optimizer(cfg, model)
+    model, optimizer, last_iter = load_checkpoint(cfg, model, optimizer)
+    lr_scheduler = get_lr_scheduler(cfg, optimizer, last_iter)
+    train_dataset, eval_dataset = get_dataset(cfg)
 
     # distribution
     if args.distributed:
@@ -134,71 +126,41 @@ def main_per_worker(process_index, ngpus_per_node, args):
         train_sampler = None
         batch_size = cfg.DATASET.IMG_NUM_PER_GPU * ngpus_per_node
     
-    # Train identifier
-    if cfg.IDENTIFIER.IS_TRAIN:
-        train_person_loader = torch.utils.data.DataLoader(
-            train_dataset,
-            batch_size=batch_size,
-            shuffle=(train_sampler is None),
-            drop_last=True,
-            collate_fn=identify_collate,
-            num_workers=cfg.WORKERS,
-            pin_memory=True,
-            sampler=train_sampler
-        )
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=(train_sampler is None),
+        drop_last=True,
+        collate_fn=objtrack_collect,
+        num_workers=cfg.WORKERS,
+        pin_memory=True,
+        sampler=train_sampler
+    )
 
-        eval_person_loader = torch.utils.data.DataLoader(
-            eval_dataset,
-            batch_size=batch_size,
-            shuffle=False,
-            drop_last=False,
-            collate_fn=identify_collate,
-            num_workers=cfg.WORKERS
-        )
-        
-        trainer_args_dict = get_identifier_trainer_args(cfg, model, output_dir, proc_rank)
-        identTrainer = IdentifierTrainer(**trainer_args_dict)
-
-    # Otherwise, train detectors
-    else:
-        train_loader = torch.utils.data.DataLoader(
-            train_dataset,
-            batch_size=batch_size,
-            shuffle=(train_sampler is None),
-            drop_last=True,
-            collate_fn=detection_collate,
-            num_workers=cfg.WORKERS,
-            pin_memory=True,
-            sampler=train_sampler
-        )
-
-        eval_loader = torch.utils.data.DataLoader(
-            eval_dataset,
-            batch_size=batch_size,
-            shuffle=False,
-            drop_last=False,
-            collate_fn=detection_collate,
-            num_workers=cfg.WORKERS
-        )
+    eval_loader = torch.utils.data.DataLoader(
+        eval_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        drop_last=False,
+        collate_fn=objtrack_collect,
+        num_workers=cfg.WORKERS
+    )
     
-        criterion = get_criterion(cfg)
+    criterion = get_criterion(cfg)
 
-        Trainer = get_det_trainer(
-            cfg,
-            model,
-            optimizer,
-            lr_scheduler,
-            criterion,
-            output_dir,
-            last_iter,
-            proc_rank,
-        )
+    Trainer = get_det_trainer(
+        cfg,
+        model,
+        optimizer,
+        lr_scheduler,
+        criterion,
+        output_dir,
+        last_iter,
+        proc_rank,
+    )
 
     while True:
-        if cfg.IDENTIFIER.IS_TRAIN:
-            identTrainer.train(train_person_loader, eval_person_loader)
-        else:
-            Trainer.train(train_loader, eval_loader)
+        Trainer.train(train_loader, eval_loader)
 
 
 if __name__ == '__main__':

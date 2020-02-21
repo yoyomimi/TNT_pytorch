@@ -247,21 +247,14 @@ def list_to_set(data_list, name='train'):
     return dataset
 
     
-def get_dataset(cfg, is_ident=False):
-    if is_ident:
-        train_transform = PersonTrainTransform(cfg.IDENTIFIER.SIZE, cfg.DATASET.MEAN)
-        eval_transform = PersonEvalTransform(cfg.IDENTIFIER.SIZE, cfg.DATASET.MEAN)
-        module = importlib.import_module(cfg.IDENTIFIER.DATASET_FILE)
-        Dataset = getattr(module, cfg.IDENTIFIER.DATASET_NAME)
-    else:
-        train_transform = TrainTransform([cfg.TRAIN.INPUT_MIN, cfg.TRAIN.INPUT_MAX], cfg.DATASET.MEAN)
-        eval_transform = EvalTransform(cfg.TEST.TEST_SIZE, cfg.DATASET.MEAN)
-        module = importlib.import_module(cfg.DATASET.FILE)
-        Dataset = getattr(module, cfg.DATASET.NAME)
-
+def get_dataset(cfg):
+    train_transform = TrainTransform([cfg.TRAIN.INPUT_MIN, cfg.TRAIN.INPUT_MAX], cfg.DATASET.MEAN)
+    eval_transform = EvalTransform(cfg.TEST.TEST_SIZE, cfg.DATASET.MEAN)
+    module = importlib.import_module(cfg.DATASET.FILE)
+    Dataset = getattr(module, cfg.DATASET.NAME)
     data_root = cfg.DATASET.ROOT # abs path in yaml
     # get train data list
-    train_root = osp.join(data_root, 'train')
+    train_root = osp.join(data_root, 'training')
     train_set = [d for d in os.listdir(train_root) if osp.isdir(osp.join(train_root, d))]  
     train_list = []
     for sub_set in train_set:
@@ -270,7 +263,7 @@ def get_dataset(cfg, is_ident=False):
         train_sub_set = Dataset(train_sub_root, train_transform)
         train_list.append(train_sub_set)
     # get eval data list
-    eval_root = osp.join(data_root, 'val')
+    eval_root = osp.join(data_root, 'eval')
     eval_set = [d for d in os.listdir(eval_root) if osp.isdir(osp.join(eval_root, d))]
     eval_list = []      
     for sub_set in eval_set:
@@ -283,39 +276,6 @@ def get_dataset(cfg, is_ident=False):
     eval_dataset = list_to_set(eval_list, 'eval')
     
     return train_dataset, eval_dataset
-
-def get_identifier_trainer_args(cfg, model, output_dir, proc_rank):
-    optimizer = optim.Adam(
-        filter(lambda p: p.requires_grad, model.parameters()),
-        lr=cfg.IDENTIFIER.LR,
-        weight_decay=cfg.IDENTIFIER.WEIGHT_DECAY)
-
-    replace_path = cfg.IDENTIFIER.WEIGHTS if cfg.IDENTIFIER.RESUME else None
-    model, optimizer, last_iter = load_checkpoint(cfg, model, optimizer, replace_path=replace_path)
-
-    lr_scheduler = WarmupMultiStepLR(
-        optimizer,
-        cfg.IDENTIFIER.LR_STEPS,
-        cfg.IDENTIFIER.LR_FACTOR,
-        cfg.IDENTIFIER.WARMUP_INIT_FACTOR,
-        cfg.IDENTIFIER.WARMUP_STEP,
-        last_iter)
-    
-    criterion = sigmoid_crossentropy_loss
-
-    return dict(
-        cfg=cfg,
-        model=model,
-        optimizer=optimizer,
-        lr_scheduler=lr_scheduler,
-        criterion=criterion,
-        log_dir=output_dir,
-        performance_indicator='acc',
-        last_iter=last_iter,
-        rank=proc_rank,
-        replace_iter=cfg.IDENTIFIER.MAX_ITERATIONS,
-        replace_model_name=cfg.IDENTIFIER.FILE
-    )
 
 def save_checkpoint(states, is_best, output_dir, filename='checkpoint.pth'):
     torch.save(states, os.path.join(output_dir, filename))
