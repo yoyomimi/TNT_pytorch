@@ -8,12 +8,19 @@ This is a PyTorch version for MOT TrackletNet
 ### data dir structure
 
 -data/ -training/ -objtrack/ -images/ -0000/ -0000xx.png
+
                                       -0001/ -0000xx.png
+                                      
                              -labels/ -0000.txt
+                             
                                       -0001.txt
+                                      
        -eval/     -objtrack/ -images/ -0000/ -0000xx.png
+       
                                       -0001/ -0000xx.png
+                                      
                              -labels/ -0000.txt
+                             
                                       -0001.txt
                                       
 e.g. data/training/objtrack/images/0000/000000.png
