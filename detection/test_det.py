@@ -30,7 +30,7 @@ parser.add_argument(
     '--cfg',
     dest='yaml_file',
     default='',
-    help='experiment configure file name, e.g. configs/kongke_fcos_createBG.yaml',
+    help='experiment configure file name, e.g. configs/fcos_detector.yaml',
     type=str)
 parser.add_argument(
     'opts',

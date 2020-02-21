@@ -13,10 +13,8 @@ import _init_paths
 from configs import cfg
 from configs import update_config
 
-from datasets.data_collate import detection_collate
-from datasets.data_collate import identify_collate
+from datasets.data_collect import objtrack_collect
 from detection.utils.metrics import eval_fcos_det
-from detection.utils.metrics import eval_identifier
 from utils.utils import get_criterion
 from utils.utils import get_dataset
 from utils.utils import get_model
@@ -27,7 +25,7 @@ parser.add_argument(
     '--cfg',
     dest='yaml_file',
     default=None,
-    help='experiment configure file name, e.g. configs/kongke_fcos_createBG.yaml',
+    help='experiment configure file name, e.g. configs/fcos_detector.yaml',
     type=str)
 parser.add_argument(
     'opts',
@@ -38,58 +36,39 @@ args = parser.parse_args()
 
 if __name__ == '__main__':
     update_config(cfg, args)
-
-    if cfg.IDENTIFIER.IS_VAL:
-        model = get_model(cfg, cfg.IDENTIFIER.FILE, cfg.IDENTIFIER.NAME)
-        resume_path = cfg.IDENTIFIER.WEIGHTS
-        _, eval_dataset = get_dataset(cfg, is_ident=True)
-        eval_loader = torch.utils.data.DataLoader(
-            eval_dataset,
-            batch_size=cfg.DATASET.IMG_NUM_PER_GPU,
-            shuffle=False,
-            drop_last=False,
-            collate_fn=identify_collate,
-        )
-
-    
-    else:
-        model = get_model(cfg, cfg.MODEL.FILE, cfg.MODEL.NAME)
-        resume_path = cfg.MODEL.RESUME_PATH
-        _, eval_dataset = get_dataset(cfg)
-        eval_loader = torch.utils.data.DataLoader(
-            eval_dataset,
-            batch_size=cfg.DATASET.IMG_NUM_PER_GPU,
-            shuffle=False,
-            drop_last=False,
-            collate_fn=detection_collate,
-        )
-        criterion = get_criterion(cfg)
+    model = get_model(cfg, cfg.MODEL.FILE, cfg.MODEL.NAME)
+    resume_path = cfg.MODEL.RESUME_PATH
+    _, eval_dataset = get_dataset(cfg)
+    eval_loader = torch.utils.data.DataLoader(
+        eval_dataset,
+        batch_size=cfg.DATASET.IMG_NUM_PER_GPU,
+        shuffle=False,
+        drop_last=False,
+        collate_fn=objtrack_collect,
+    )
+    criterion = get_criterion(cfg)
     
     model = load_eval_model(resume_path, model)
 
     model.cuda()
     model.eval()
 
-    if cfg.IDENTIFIER.IS_VAL:
-       acc = eval_identifier(cfg, eval_loader, model)
-    
-    else:
-        mAP, aps, pr_curves = eval_fcos_det(cfg,
-            criterion,
-            eval_loader,
-            model,
-            rescale=None)
-        print(f"score_threshold:{cfg.TEST.SCORE_THRESHOLD}, nms_iou:{cfg.TEST.NMS_THRESHOLD}")
-        print(f'size:{cfg.TEST.TEST_SIZE[0], cfg.TEST.TEST_SIZE[1]} mAP:{mAP}')
+    mAP, aps, pr_curves = eval_fcos_det(cfg,
+        criterion,
+        eval_loader,
+        model,
+        rescale=None)
+    print(f"score_threshold:{cfg.TEST.SCORE_THRESHOLD}, nms_iou:{cfg.TEST.NMS_THRESHOLD}")
+    print(f'size:{cfg.TEST.TEST_SIZE[0], cfg.TEST.TEST_SIZE[1]} mAP:{mAP}')
 
-        # save output val_images
-        if osp.exists(cfg.TEST.OUT_DIR):
-            import shutil
-            shutil.rmtree(cfg.TEST.OUT_DIR)
-        os.makedirs(cfg.TEST.OUT_DIR)
+    # save output val_images
+    if osp.exists(cfg.TEST.OUT_DIR):
+        import shutil
+        shutil.rmtree(cfg.TEST.OUT_DIR)
+    os.makedirs(cfg.TEST.OUT_DIR)
 
-        # save pr_curve
-        if cfg.TEST.PR_CURVE:
-            for class_idx, pr_curve in enumerate(pr_curves):
-                pr_curve.savefig(osp.join(cfg.TEST.OUT_DIR, f'PR_class_{class_idx + 1}.jpg'))
-            print(f'PR curve saved in {cfg.TEST.OUT_DIR}')
+    # save pr_curve
+    if cfg.TEST.PR_CURVE:
+        for class_idx, pr_curve in enumerate(pr_curves):
+            pr_curve.savefig(osp.join(cfg.TEST.OUT_DIR, f'PR_class_{class_idx + 1}.jpg'))
+        print(f'PR curve saved in {cfg.TEST.OUT_DIR}')

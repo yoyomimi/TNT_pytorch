@@ -16,7 +16,6 @@ from configs import cfg
 from configs import update_config
 
 from datasets.data_collect import objtrack_collect
-from detection.trainer.identifier_trainer import IdentifierTrainer
 from utils.utils import create_logger
 from utils.utils import get_model
 from utils.utils import get_optimizer
@@ -33,7 +32,7 @@ def parse_args():
     parser.add_argument(
         '--cfg',
         dest='yaml_file',
-        help='experiment configure file name, e.g. configs/fcos_detector.yaml ',
+        help='experiment configure file name, e.g. configs/fcos_detector.yaml',
         required=True,
         type=str)
     
