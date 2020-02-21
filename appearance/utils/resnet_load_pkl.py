@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 import torch
 
-from utils.utils.registry import Registry
+from utils.registry import Registry
 
 def align_and_update_state_dicts(model_state_dict, loaded_state_dict):
     """

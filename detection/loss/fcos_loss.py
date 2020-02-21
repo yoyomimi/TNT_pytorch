@@ -19,8 +19,8 @@ class FCOSLoss(nn.Module):
     def __init__(self, 
                 cfg,
                 num_classes,
-                strides=(8, 16, 32),
-                regress_ranges=((-1, INF), (-1, INF), (-1, INF)),
+                strides=(8, 16, 32, 64, 128),
+                regress_ranges=((-1, 64), (64, 128), (128, 256), (256, 512), (512, INF)),
                 focal_alpha=0.25, 
                 focal_gamma=2,
                 iou_eps=1e-6):
@@ -65,8 +65,8 @@ class FCOSLoss(nn.Module):
                 centernesses,
                 targets):
 
-        gt_labels = [target[..., -1] for target in targets]
-        gt_bboxes = [target[..., :-1] for target in targets]
+        gt_labels = [target[..., 4] for target in targets]
+        gt_bboxes = [target[..., 0:4] for target in targets]
         assert len(cls_scores) == len(bbox_preds) == len(centernesses)
         featmap_sizes = [featmap.size()[-2:] for featmap in cls_scores]
         # map pred on each level to the original image

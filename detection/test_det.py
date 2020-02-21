@@ -16,7 +16,7 @@ import _init_paths
 from configs import cfg
 from configs import update_config
 from datasets.transform import PredictionTransform
-from utils.metrics import run_fcos_det_example
+from detection.utils.metrics import run_fcos_det_example
 from utils.utils import get_criterion
 from utils.utils import get_model
 
@@ -71,7 +71,6 @@ if __name__ == '__main__':
         jpg_paths = [osp.join(args.jpg_path, file_name) for file_name in file_names]
     else:
         raise FileNotFoundError
-    
     transform = PredictionTransform(size=(768, 1280))
     timer = []
     for i, jpg_path in tqdm(enumerate(jpg_paths)):
@@ -85,7 +84,7 @@ if __name__ == '__main__':
             model
         )
         timer.append(time.time() - start)
-        num = jpg_path.split('.')[-2].split('_')[-1]
+        num = jpg_path.split('.')[-2].split('/')[-1]
         cv2.imwrite(osp.join(cfg.TEST.OUT_DIR, f'run_fcos_example_{num}.jpg'), img)
     print(f'finnal output dir is {cfg.TEST.OUT_DIR}')
     print(f'average inference time: {sum(timer) / len(timer)}s')

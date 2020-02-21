@@ -27,7 +27,7 @@ class FCOSTrainer(BaseTrainer):
                          log_dir, performance_indicator, last_iter, rank)
         
     def _read_inputs(self, inputs):
-        imgs, targets, index = inputs
+        imgs, targets, track_id, index = inputs
         imgs = imgs.cuda(non_blocking=True)
         # targets are list type in det tasks
         targets = [target.cuda(non_blocking=True) for target in targets]

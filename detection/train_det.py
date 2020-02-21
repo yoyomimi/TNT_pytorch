@@ -23,7 +23,6 @@ from utils.utils import get_lr_scheduler
 from utils.utils import get_dataset
 from utils.utils import get_criterion
 from utils.utils import get_det_trainer
-from utils.utils import get_identifier_trainer_args
 from utils.utils import load_checkpoint
 
 
@@ -85,8 +84,8 @@ def main_per_worker(process_index, ngpus_per_node, args):
 
     #create logger
     logger, output_dir = create_logger(cfg, proc_rank)
-    logger.info(pprint.pformat(args))
-    logger.info(cfg)
+    # logger.info(pprint.pformat(args))
+    # logger.info(cfg)
 
     model = get_model(cfg, cfg.MODEL.FILE, cfg.MODEL.NAME)  
     optimizer = get_optimizer(cfg, model)

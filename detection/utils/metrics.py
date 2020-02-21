@@ -97,39 +97,6 @@ def calculate_ap(id_prob_box, gt_boxes, ap_iou=0.5):
                    precision, recall
 
 @torch.no_grad()
-def eval_identifier(cfg, eval_loader, model):
-    model.eval()
-    acc = 0.0
-    count = 0
-    for data in tqdm(eval_loader):
-        if count > 50:
-            break
-        count = count + 1
-        imgs = data[0]
-        imgs = imgs.cuda(non_blocking=True)
-        cls_score = model(imgs).sigmoid()
-        pred = cls_score.data.cpu().max(1, keepdim=True)[1]
-        targets = data[1].data
-        true = pred.eq(targets.view_as(pred))
-        acc += true.sum() / len(pred)
-    acc /= min(count, len(eval_loader))
-    print(f"acc : {acc}")
-
-    return acc
-
-@torch.no_grad()
-def test_identifier(cfg, demo_frame, boxes, transform, model):
-    valid_boxes = []
-    for i in range(boxes.shape[0]):
-        box = boxes[i]
-        img = transform(demo_frame, box).unsqueeze(0).cuda()
-        cls_score = model(img).sigmoid()
-        pred = cls_score.data.cpu().max(1, keepdim=True)[1][0]
-        if pred == 1:
-            valid_boxes.append(box)
-    return np.array(valid_boxes, dtype=np.int64)
-
-@torch.no_grad()
 def eval_fcos_det(cfg, criterion, eval_loader,
                   model, rescale=None):
     model.eval()
@@ -139,7 +106,7 @@ def eval_fcos_det(cfg, criterion, eval_loader,
     for data in tqdm(eval_loader):
         # imgs.shape = (B, H, W), targets: list [(num_object, 5)...]
         # gt_box: target[0: 4], gt_label: target[4]
-        imgs, targets, _ = data
+        imgs, targets, _, _ = data
         batch_size = imgs.size(0)
         imgs = imgs.cuda(non_blocking=True)
         # output shape: (B, num_prior, 4), (B, num_prior, c), (num_prior, 4)
@@ -227,6 +194,12 @@ def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=
     labels = result_list[:,0]
     probs =  result_list[:,2]
     new_boxes = []
+    class_dict = {
+        0: 'DontCare',
+        1: 'Pedestrian',
+        2: 'Car',
+        3: 'Cyclist',
+    }
     for i in range(boxes.size(0)):
         box = boxes[i]
         box[0:4:2] = box[0:4:2] / new_w * w
@@ -235,8 +208,11 @@ def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=
         if demo_frame is None:
             cv2.rectangle(orig_image, (box[0], box[1]),
                          (box[2], box[3]), (0, 255, 9), 4)
-            # label = f"{labels[i]}: {probs[i]:.2f}"
-            label = ''
+            label_idx = int(labels[i])
+            if label_idx in [0, 1, 2, 3]:
+                label = class_dict[label_idx]
+            else:
+                label = 'other'
             cv2.putText(
                 orig_image,
                 label,
@@ -244,7 +220,7 @@ def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=
                 cv2.FONT_HERSHEY_SIMPLEX,
                 1,  # font scale
                 (255, 0, 0),
-                1)  # line type
+                2)  # line type
     if demo_frame is not None:
         return np.array(new_boxes)
     return orig_image

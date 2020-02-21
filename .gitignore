@@ -130,3 +130,7 @@ dmypy.json
 data/
 checkpoint/
 dataset/test_trans_image/
+work_dirs/
+output/
+fcos_detector/
+eval_outdir/

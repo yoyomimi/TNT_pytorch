@@ -24,7 +24,7 @@ from torch import nn
 from units.units import group_norm
 from units.units import FrozenBatchNorm2d
 from units.units import Conv2d
-from libs.utils.registry import Registry
+from utils.registry import Registry
 
 # ResNet stage specification
 StageSpec = namedtuple(

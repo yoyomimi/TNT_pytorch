@@ -11,8 +11,8 @@ this_dir = osp.dirname(__file__)
 
 project_path = osp.dirname(this_dir)
 model_path = osp.join(project_path, 'detection', 'models')
-dataset_path = osp.join(project_path, 'detection', 'datasets')
-det_loss_path = osp.join(project_path, 'detection', 'losses')
+dataset_path = osp.join(project_path, 'datasets')
+det_loss_path = osp.join(project_path, 'detection', 'loss')
 trainer_path = osp.join(project_path, 'detection', 'trainer')
 
 add_path(project_path)

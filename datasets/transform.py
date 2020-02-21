@@ -166,11 +166,6 @@ class PredictionTransform(object):
         return img
 
 
-    def __call__(self, img, box):
-        img = img[box[1]:box[3], box[0]:box[2], :]
-        img, _, _ = self.transform(img)
-        return img
-
 if __name__ == '__main__':
     import os
     import cv2

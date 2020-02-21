@@ -6,9 +6,9 @@ CUDNN:
   DETERMINISTIC: False
   ENABLED: True
 DATASET:
-  FILE: kongke
-  NAME: KongkeDataset
-  ROOT: '/Users/chenmingfei/Downloads/Hwang_Papers/TNT_pytorch/data'
+  FILE: ObjtrackDataset
+  NAME: ObjtrackDataset
+  ROOT: '/mnt/cephfs_new_wj/cv/chenmingfei.lasia/TNT_pytorch/data'
   IMG_NUM_PER_GPU: 8
   MEAN: [102.9801, 115.9465, 122.7717]
   STD: [1, 1, 1]
@@ -20,6 +20,7 @@ MODEL:
   BACKBONE:
     PRETRAINED: True
     CONV_BODY: 'R-50-FPN-RETINANET'
+    WEIGHTS: ''
   RESNETS:
     BACKBONE_OUT_CHANNELS: 256
   NECK:
@@ -60,7 +61,7 @@ TEST:
   NMS_THRESHOLD: 0.5
   SCORE_THRESHOLD: 0.35
   AP_IOU: 0.5
-  MAX_PER_IMG: 1000
+  MAX_PER_IMG: 100
   NMS_PRE: 1000
   PR_CURVE: True
   OUT_DIR: 'output'
