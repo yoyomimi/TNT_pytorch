@@ -71,7 +71,7 @@ if __name__ == '__main__':
         jpg_paths = [osp.join(args.jpg_path, file_name) for file_name in file_names]
     else:
         raise FileNotFoundError
-    transform = PredictionTransform(size=(768, 1280))
+    transform = PredictionTransform(size=(352, 1216))
     timer = []
     for i, jpg_path in tqdm(enumerate(jpg_paths)):
         if jpg_path.split('.')[-1].lower() not in ['jpg', 'png', 'jpeg', 'bmp']:
