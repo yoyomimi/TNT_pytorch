@@ -1,0 +1,94 @@
+OUTPUT_ROOT: fcos_createBG
+DIST_BACKEND: 'nccl'
+WORKERS: 4
+VIDEO_PATH: '/mnt/cephfs_new_wj/cv/chenmingfei.lasia/Kongke/Kongke.mp4'
+CUDNN:
+  BENCHMARK: True
+  DETERMINISTIC: False
+  ENABLED: True
+DATASET:
+  FILE: kongke
+  NAME: KongkeDataset
+  ROOT: '/mnt/cephfs_new_wj/cv/chenmingfei.lasia/Kongke/kongke/data/KongkeData'
+  IMG_NUM_PER_GPU: 8
+  MEAN: [102.9801, 115.9465, 122.7717]
+  STD: [1, 1, 1]
+  NUM_CLASSES: 2
+BG:
+  NMS_THRESHOLD: 0.1
+  VAR: 30.0
+  REC_BIAS: 12
+  VALID_SIZE: 20.0
+  OUTPUT_DIR: 'createBG_output'
+IDENTIFIER:
+  IS_TRAIN: False
+  DATASET_FILE: person
+  DATASET_NAME: PersonDataset
+  FILE: identify_person
+  NAME: Identifier
+  NUM_CLASSES: 2
+  SIZE: 32 # divisible by 32
+  LR: 0.001
+  WEIGHT_DECAY: 0.0001
+  LR_STEPS: [60000, 80000]
+  LR_FACTOR: 0.1
+  MAX_ITERATIONS: 90000
+  RESUME: False
+  WEIGHTS: ''
+  IS_VAL: True
+MODEL:
+  FILE: fcos_res50
+  NAME: FCOS_ResNet50
+  RESUME_PATH: ''
+  BACKBONE:
+    PRETRAINED: True
+    CONV_BODY: 'R-50-FPN-RETINANET'
+  RESNETS:
+    BACKBONE_OUT_CHANNELS: 256
+  NECK:
+    IN_CHANNELS: [256, 512, 1024, 2048]
+    OUT_CHANNELS: 256
+    START_LEVEL: 1
+    ADD_EXTRA_CONVS: False
+    NUM_OUTS: 3
+  HEAD:
+    IN_CHANNELS: 256
+    OUT_CHANNELS: 256
+    STACKED_CONVS: 4
+    STRIDES: (8, 16, 32)
+TRAINER:
+  FILE: FCOStrainer
+  NAME: FCOSTrainer
+LOSS:
+  FILE: fcos_loss
+  NAME: FCOSLoss
+  LAMDA: 1
+TRAIN:
+  LR: 0.0025
+  LR_FACTOR: 0.1
+  MOMENTUM: 0.9
+  WEIGHT_DECAY: 0.0001
+  LR_STEPS: [120000, 160000]
+  MAX_ITERATIONS: 180000
+  OPTIMIZER: sgd
+  RESUME: True
+  INPUT_MIN: 768
+  INPUT_MAX: 1408 #divisible by 32
+  PRINT_FREQ: 200
+  SAVE_INTERVAL: 5000 #5000
+  SAVE_EVERY_CHECKPOINT: True
+  VAL_WHEN_TRAIN: False
+TEST:
+  TEST_SIZE: (768, 1280) # min_size, max_size
+  NMS_THRESHOLD: 0.5
+  SCORE_THRESHOLD: 0.35
+  AP_IOU: 0.5
+  MAX_PER_IMG: 1000
+  NMS_PRE: 1000
+  PR_CURVE: True
+  OUT_DIR: 'output'
+
+
+
+
+
