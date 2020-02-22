@@ -17,7 +17,7 @@ from configs import cfg
 from configs import update_config
 from datasets.transform import PredictionTransform
 from detection.utils.metrics import run_fcos_det_example
-from utils.utils import get_criterion
+from utils.utils import get_det_criterion
 from utils.utils import get_model
 
 parser = argparse.ArgumentParser(description="run FCOS example")
@@ -33,6 +33,11 @@ parser.add_argument(
     help='experiment configure file name, e.g. configs/fcos_detector.yaml',
     type=str)
 parser.add_argument(
+    '--crop',
+    action='store_true',
+    default=False,
+    help='if crop and save the det results')
+parser.add_argument(
     'opts',
     help="Modify config options using the command-line",
     default=None,
@@ -45,7 +50,7 @@ if __name__ == '__main__':
 
     #detect
     model = get_model(cfg, cfg.MODEL.FILE, cfg.MODEL.NAME)
-    criterion = get_criterion(cfg)
+    criterion = get_det_criterion(cfg)
     model.cuda()
     model.eval()
     

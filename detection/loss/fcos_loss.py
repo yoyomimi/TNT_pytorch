@@ -285,13 +285,13 @@ class FCOSLoss(nn.Module):
             img_shape = (cfg.TEST.TEST_SIZE[0], cfg.TEST.TEST_SIZE[1])
             scale_factor = 1.0
             det_bboxes, det_labels = self.get_bboxes_single(cfg,
-                                                            cls_score_list, 
-                                                            bbox_pred_list,
-                                                            centerness_pred_list,
-                                                            mlvl_points, 
-                                                            img_shape,
-                                                            scale_factor, 
-                                                            rescale)
+                cls_score_list, 
+                bbox_pred_list,
+                centerness_pred_list,
+                mlvl_points, 
+                img_shape,
+                scale_factor, 
+                rescale)
             id = torch.ones(det_labels.size(0), 1, dtype=torch.float32) * (img_id + img_start_id)
             if imgs_size:
                 size_0 =  torch.ones(det_labels.size(0), 1, dtype=torch.float32) * imgs_size[img_id][0]

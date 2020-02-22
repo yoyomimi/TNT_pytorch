@@ -209,7 +209,7 @@ def get_lr_scheduler(cfg, optimizer, last_epoch=-1):
     
     return lr_scheduler
 
-def get_criterion(cfg):
+def get_det_criterion(cfg):
     module = importlib.import_module(cfg.LOSS.FILE)
     critertion = getattr(module, cfg.LOSS.NAME)(cfg,
         cfg.DATASET.NUM_CLASSES,
@@ -217,7 +217,12 @@ def get_criterion(cfg):
     )
     return critertion
 
-def get_det_trainer(cfg, model, optimizer, lr_scheduler,
+def get_criterion(cfg):
+    module = importlib.import_module(cfg.LOSS.FILE)
+    critertion = getattr(module, cfg.LOSS.NAME)(cfg)
+    return critertion
+
+def get_trainer(cfg, model, optimizer, lr_scheduler,
                 criterion, log_dir, last_iter, rank):
     module = importlib.import_module(cfg.TRAINER.FILE)
     Trainer = getattr(module, cfg.TRAINER.NAME)(

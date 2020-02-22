@@ -15,7 +15,7 @@ from configs import update_config
 
 from datasets.data_collect import objtrack_collect
 from detection.utils.metrics import eval_fcos_det
-from utils.utils import get_criterion
+from utils.utils import get_det_criterion
 from utils.utils import get_dataset
 from utils.utils import get_model
 from utils.utils import load_eval_model
@@ -46,7 +46,7 @@ if __name__ == '__main__':
         drop_last=False,
         collate_fn=objtrack_collect,
     )
-    criterion = get_criterion(cfg)
+    criterion = get_det_criterion(cfg)
     
     model = load_eval_model(resume_path, model)
 

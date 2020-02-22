@@ -43,6 +43,8 @@ _C.MODEL.FILE = ''
 _C.MODEL.NAME = ''
 # resume
 _C.MODEL.RESUME_PATH = ''
+_C.MODEL.FEATURE_PATH = ''
+_C.MODEL.LOGITS_PATH = ''
 
 # backbone
 _C.MODEL.BACKBONE = CN()

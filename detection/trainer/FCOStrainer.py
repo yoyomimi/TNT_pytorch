@@ -6,9 +6,9 @@
 import logging
 
 from datasets.transform import PredictionTransform
-from detection.trainer.trainer import BaseTrainer
 from detection.utils.metrics import eval_fcos_det
 from detection.utils.metrics import run_fcos_det_example
+from units.trainer import BaseTrainer
 
 class FCOSTrainer(BaseTrainer):
 

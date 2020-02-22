@@ -173,7 +173,7 @@ def eval_fcos_det(cfg, criterion, eval_loader,
     return mAP, aps, pr_curves
 
 @torch.no_grad()
-def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=None):
+def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=None, is_crop=False):
     model.eval()
     if demo_frame is None:
         orig_image = cv2.imread(jpg_path, cv2.IMREAD_COLOR)
@@ -205,7 +205,7 @@ def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=
         box[0:4:2] = box[0:4:2] / new_w * w
         box[1:4:2] = box[1:4:2] / new_h * h
         new_boxes.append(box.cpu().data.numpy())
-        if demo_frame is None:
+        if demo_frame is None and is_crop == False:
             cv2.rectangle(orig_image, (box[0], box[1]),
                          (box[2], box[3]), (0, 255, 9), 4)
             label_idx = int(labels[i])
@@ -221,7 +221,9 @@ def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=
                 1,  # font scale
                 (255, 0, 0),
                 2)  # line type
-    if demo_frame is not None:
-        return np.array(new_boxes)
+
+    if demo_frame is not None or is_crop:
+        return orig_image, np.array(new_boxes), labels.cpu().data.numpy()
+
     return orig_image
 

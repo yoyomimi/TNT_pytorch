@@ -134,3 +134,4 @@ work_dirs/
 output/
 fcos_detector/
 eval_outdir/
+crop_det/

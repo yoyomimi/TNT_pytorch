@@ -21,8 +21,8 @@ from utils.utils import get_model
 from utils.utils import get_optimizer
 from utils.utils import get_lr_scheduler
 from utils.utils import get_dataset
-from utils.utils import get_criterion
-from utils.utils import get_det_trainer
+from utils.utils import get_det_criterion
+from utils.utils import get_trainer
 from utils.utils import load_checkpoint
 
 
@@ -144,9 +144,9 @@ def main_per_worker(process_index, ngpus_per_node, args):
         num_workers=cfg.WORKERS
     )
     
-    criterion = get_criterion(cfg)
+    criterion = get_det_criterion(cfg)
 
-    Trainer = get_det_trainer(
+    Trainer = get_trainer(
         cfg,
         model,
         optimizer,
