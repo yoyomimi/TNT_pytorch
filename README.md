@@ -12,6 +12,15 @@ Start to train or eval or test:
 see detection/detect.sh
 
 
+## crop images using labels
+
+Use tracking labels to generate crop images. Destination dir structure is as data/crop_data dir in tree.md.
+
+Start to crop:
+
+python3 datasets/crop_gt_box.py --data_root data/ --dst_root data/crop_data   
+
+
 ## appearance
 
 Facenet + triplet loss to train feature embeddings generation based on cropped images.
