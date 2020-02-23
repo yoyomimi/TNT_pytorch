@@ -38,6 +38,9 @@ class BaseTrainer(object):
         self.replace_model_name = replace_model_name
         self.model_name = replace_model_name if replace_model_name else self.cfg.MODEL.NAME
         logging.info(f"max iterations = {self.max_iter} ")
+
+        if self.PI == 'triplet_loss':
+            self.best_performance = 1e10
         # TODO init model weights
 
     def _read_inputs(self, inputs):
@@ -124,7 +127,10 @@ class BaseTrainer(object):
                     self.model.eval()
                     performance = self.evaluate(eval_loader)
                     self.writer.add_scalar(self.PI, performance, self.iter)
-                    if performance > self.best_performance:
+                    if self.PI == 'triplet_loss' and performance < self.best_performance:
+                        self.is_best = True
+                        self.best_performance = performance
+                    elif performance > self.best_performance:
                         self.is_best = True
                         self.best_performance = performance
                     else:

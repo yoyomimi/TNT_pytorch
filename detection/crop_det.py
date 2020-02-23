@@ -12,7 +12,6 @@ import cv2
 import torch
 from tqdm import tqdm
 
-import _init_paths
 from configs import cfg
 from configs import update_config
 from datasets.transform import PredictionTransform
@@ -20,7 +19,7 @@ from detection.utils.metrics import run_fcos_det_example
 from utils.utils import get_det_criterion
 from utils.utils import get_model
 
-def write_crop(img, boxes, labels, frame_crop_path):
+def write_crop(img, boxes, labels, frame_crop_path, frame_id=None):
     assert len(boxes) == len(labels)
     class_dict = {
         0: 'DontCare',
@@ -36,7 +35,10 @@ def write_crop(img, boxes, labels, frame_crop_path):
         ymax = math.ceil(ymax)
         if int(labels[i]) in [1, 2, 3]:
             label = class_dict[int(labels[i])]
-        img_crop_path = osp.join(frame_crop_path, f'{label}_{xmin}_{ymin}_{xmax}_{ymax}_crop.jpg')
+        if frame_id is None:
+            img_crop_path = osp.join(frame_crop_path, f'{label}_{xmin}_{ymin}_{xmax}_{ymax}_crop.jpg')
+        else:
+            img_crop_path = osp.join(frame_crop_path, f'{label}_{frame_id}_crop.jpg')
         im = img[ymin:ymax, xmin:xmax, :]
         cv2.imwrite(img_crop_path, im)
 

@@ -1,11 +1,13 @@
 OUTPUT_ROOT: facenet_triplet_appearance
 DIST_BACKEND: 'nccl'
+PI: 'triplet_loss'
 WORKERS: 4
 CUDNN:
   BENCHMARK: True
   DETERMINISTIC: False
   ENABLED: True
 DATASET:
+  ROOT: '/mnt/cephfs_new_wj/cv/chenmingfei.lasia/TNT_pytorch/data/crop_data'
   IMG_NUM_PER_GPU: 8
   MEAN: [102.9801, 115.9465, 122.7717]
   STD: [1, 1, 1]
@@ -14,22 +16,22 @@ MODEL:
   NAME: InceptionResnetV1
   FEATURE_PATH: '/mnt/cephfs_new_wj/cv/chenmingfei.lasia/TNT_pytorch/data/20180402-114759-vggface2-features.pt'
   LOGITS_PATH: '/mnt/cephfs_new_wj/cv/chenmingfei.lasia/TNT_pytorch/data/20180402-114759-vggface2-logits.pt'
-LOSS:
-  FILE: triplet_loss
-  NAME: TripletLoss
+TRAINER:
+  FILE: appearanceTrainer
+  NAME: appearanceTrainer
 TRAIN:
   LR: 0.001
   LR_FACTOR: 0.1
   MOMENTUM: 0.9
   WEIGHT_DECAY: 0.0001
-  LR_STEPS: [6000, 8000]
-  MAX_ITERATIONS: 9000
+  LR_STEPS: [60000, 100000]
+  MAX_ITERATIONS: 120000
   OPTIMIZER: sgd
   RESUME: True
   INPUT_MIN: 182
   INPUT_MAX: 182 
-  PRINT_FREQ: 200
-  SAVE_INTERVAL: 5000
+  PRINT_FREQ: 100
+  SAVE_INTERVAL: 2000
   SAVE_EVERY_CHECKPOINT: True
   VAL_WHEN_TRAIN: False
 TEST:

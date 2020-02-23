@@ -17,11 +17,16 @@ from configs import update_config
 
 # from datasets.data_collect import triplet_collect #TODO
 from appearance.backbones.inception_resnet_v1 import InceptionResnetV1
+from appearance.loss.facenet_loss import triplet_loss
+
+from datasets.data_collect import facenet_triplet_collect
+from datasets.FacenetTripletDataset import FacenetTripletDataset
+from datasets.transform import FacenetTransform
+
 from utils.utils import create_logger
 from utils.utils import get_model
 from utils.utils import get_optimizer
 from utils.utils import get_lr_scheduler
-from utils.utils import get_criterion
 from utils.utils import get_trainer
 from utils.utils import load_checkpoint
 
@@ -91,74 +96,82 @@ def main_per_worker(process_index, ngpus_per_node, args):
     optimizer = get_optimizer(cfg, model)
     model, optimizer, last_iter = load_checkpoint(cfg, model, optimizer)
     lr_scheduler = get_lr_scheduler(cfg, optimizer, last_iter)
-    # train_dataset, eval_dataset = get_dataset(cfg)
 
-    # # distribution
-    # if args.distributed:
-    #     logger.info(
-    #         f'Init process group: dist_url: {args.dist_url},  '
-    #         f'world_size: {args.world_size}, '
-    #         f'machine: {args.rank}, '
-    #         f'rank:{proc_rank}'
-    #     )
-    #     dist.init_process_group(
-    #         backend=cfg.DIST_BACKEND,
-    #         init_method=args.dist_url,
-    #         world_size=args.world_size,
-    #         rank=proc_rank
-    #     )
-    #     torch.cuda.set_device(process_index)
-    #     model.cuda()
-    #     model = torch.nn.parallel.DistributedDataParallel(
-    #         model, device_ids=[process_index]
-    #     )
-    #     train_sampler = torch.utils.data.distributed.DistributedSampler(
-    #         train_dataset
-    #     )
-    #     batch_size = cfg.DATASET.IMG_NUM_PER_GPU
+    train_transform = FacenetTransform(size=(cfg.TRAIN.INPUT_MIN, cfg.TRAIN.INPUT_MAX))
+    train_dataset = FacenetTripletDataset(cfg.DATASET.ROOT, transform=train_transform, is_train=True)
 
-    # else:
-    #     assert proc_rank == 0, ('proc_rank != 0, it will influence '
-    #                             'the evaluation procedure')
-    #     model = torch.nn.DataParallel(model).cuda()
-    #     train_sampler = None
-    #     batch_size = cfg.DATASET.IMG_NUM_PER_GPU * ngpus_per_node
+    eval_transform = FacenetTransform(size=cfg.TEST.TEST_SIZE)
+    eval_dataset = FacenetTripletDataset(cfg.DATASET.ROOT, transform=eval_transform, is_train=False)
+
+    # distribution
+    if args.distributed:
+        logger.info(
+            f'Init process group: dist_url: {args.dist_url},  '
+            f'world_size: {args.world_size}, '
+            f'machine: {args.rank}, '
+            f'rank:{proc_rank}'
+        )
+        dist.init_process_group(
+            backend=cfg.DIST_BACKEND,
+            init_method=args.dist_url,
+            world_size=args.world_size,
+            rank=proc_rank
+        )
+        torch.cuda.set_device(process_index)
+        model.cuda()
+        model = torch.nn.parallel.DistributedDataParallel(
+            model, device_ids=[process_index]
+        )
+        train_sampler = torch.utils.data.distributed.DistributedSampler(
+            train_dataset
+        )
+        batch_size = cfg.DATASET.IMG_NUM_PER_GPU
+
+    else:
+        assert proc_rank == 0, ('proc_rank != 0, it will influence '
+                                'the evaluation procedure')
+        model = torch.nn.DataParallel(model).cuda()
+        train_sampler = None
+        batch_size = cfg.DATASET.IMG_NUM_PER_GPU * ngpus_per_node
     
-    # train_loader = torch.utils.data.DataLoader(
-    #     train_dataset,
-    #     batch_size=batch_size,
-    #     shuffle=(train_sampler is None),
-    #     drop_last=True,
-    #     collate_fn=objtrack_collect,
-    #     num_workers=cfg.WORKERS,
-    #     pin_memory=True,
-    #     sampler=train_sampler
-    # )
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=(train_sampler is None),
+        drop_last=True,
+        collate_fn=facenet_triplet_collect,
+        num_workers=cfg.WORKERS,
+        pin_memory=True,
+        sampler=train_sampler
+    )
 
-    # eval_loader = torch.utils.data.DataLoader(
-    #     eval_dataset,
-    #     batch_size=batch_size,
-    #     shuffle=False,
-    #     drop_last=False,
-    #     collate_fn=objtrack_collect,
-    #     num_workers=cfg.WORKERS
-    # )
+    eval_loader = torch.utils.data.DataLoader(
+        eval_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        drop_last=False,
+        collate_fn=facenet_triplet_collect,
+        num_workers=cfg.WORKERS
+    )
     
-    # criterion = get_criterion(cfg)
+    criterion = triplet_loss
 
-    # Trainer = get_trainer(
-    #     cfg,
-    #     model,
-    #     optimizer,
-    #     lr_scheduler,
-    #     criterion,
-    #     output_dir,
-    #     last_iter,
-    #     proc_rank,
-    # )
+    Trainer = get_trainer(
+        cfg,
+        model,
+        optimizer,
+        lr_scheduler,
+        criterion,
+        output_dir,
+        last_iter,
+        proc_rank,
+    )
 
-    # while True:
-    #     Trainer.train(train_loader, eval_loader)
+    while True:
+        Trainer.train(train_loader, eval_loader)
+
+    # eval
+    Trainer.evaluate(eval_loader)
 
 
 if __name__ == '__main__':
