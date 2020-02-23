@@ -5,15 +5,28 @@ This is a PyTorch version for MOT TrackletNet
 
 ## detection
 
-### data dir structure
+FCOS to detect objects with class on images.
 
-
-
-### detection run
+Start to train or eval or test:
 
 see detection/detect.sh
 
-### environments
+
+## appearance
+
+Facenet + triplet loss to train feature embeddings generation based on cropped images.
+
+Start to train:
+
+python3 appearance/train_appearance.py --cfg configs/facenet_triplet_appearance.yaml
+
+
+## data dir structure
+
+see tree.md
+
+
+## environments
 
 see requirements.txt
 
