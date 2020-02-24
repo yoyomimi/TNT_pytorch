@@ -222,6 +222,24 @@ class FacenetTransform(object):
         img, _, _ = self.transform(img)
         return img
 
+class FacenetInferenceTransform(object):
+    def __init__(self, size=[182, 182], mean=(102.9801, 115.9465, 122.7717), std=(1.0, 1.0, 1.0)):
+        # BGR
+        self.mean = mean
+        self.std = std
+        self.min_size, self.max_size = size
+
+        self.transform = Compose([
+            ConvertFromInts(),
+            Resize(self.min_size, self.max_size),
+            SubtractMeans(mean),
+            ToTensor(),
+        ])
+
+    def __call__(self, img):
+        img, _, _ = self.transform(img)
+        return img
+
 if __name__ == '__main__':
     import os
     import cv2
