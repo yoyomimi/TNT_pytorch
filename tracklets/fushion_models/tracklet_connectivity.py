@@ -11,7 +11,7 @@ from appearance.backbones.inception_resnet_v1 import InceptionResnetV1
 from utils.utils import load_eval_model
 
 class TrackletConnectivity(nn.Module):
-    def __init__(self, cfg, max_emb_bs=2, emb_dim=512):
+    def __init__(self, cfg, max_emb_bs=16, emb_dim=512):
 
         super().__init__()
         self.emb = InceptionResnetV1(pretrained='vggface2', classify=False)
