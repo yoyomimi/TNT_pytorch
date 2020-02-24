@@ -2255,57 +2255,9 @@
 │   └── utils.py
 └── work_dirs
     ├── facenet_triplet_appearance
-    │   ├── 2020-02-22-22-10
-    │   │   └── train_2020-02-22-22-10_rank0.log
-    │   ├── 2020-02-22-22-19
-    │   │   └── train_2020-02-22-22-19_rank0.log
-    │   ├── 2020-02-22-22-24
-    │   │   └── train_2020-02-22-22-24_rank0.log
-    │   ├── 2020-02-22-22-26
-    │   │   └── train_2020-02-22-22-26_rank0.log
-    │   ├── 2020-02-22-22-27
-    │   │   └── train_2020-02-22-22-27_rank0.log
-    │   ├── 2020-02-22-22-29
-    │   │   └── train_2020-02-22-22-29_rank0.log
-    │   ├── 2020-02-22-22-30
-    │   │   └── train_2020-02-22-22-30_rank0.log
-    │   ├── 2020-02-22-22-34
-    │   │   └── train_2020-02-22-22-34_rank0.log
-    │   ├── 2020-02-22-22-35
-    │   │   └── train_2020-02-22-22-35_rank0.log
-    │   ├── 2020-02-22-22-38
-    │   │   └── train_2020-02-22-22-38_rank0.log
-    │   ├── 2020-02-22-22-41
-    │   │   └── train_2020-02-22-22-41_rank0.log
-    │   ├── 2020-02-22-22-44
-    │   │   └── train_2020-02-22-22-44_rank0.log
-    │   ├── 2020-02-24-00-04
-    │   │   └── train_2020-02-24-00-04_rank0.log
-    │   ├── 2020-02-24-00-09
-    │   │   ├── events.out.tfevents.1582474161.n224-022-185
-    │   │   └── train_2020-02-24-00-09_rank0.log
-    │   ├── 2020-02-24-00-11
-    │   │   ├── events.out.tfevents.1582474269.n224-022-185
-    │   │   ├── InceptionResnetV1_epoch000_iter000010_checkpoint.pth
-    │   │   ├── InceptionResnetV1_epoch000_iter000020_checkpoint.pth
-    │   │   ├── model_best.pth
-    │   │   └── train_2020-02-24-00-11_rank0.log
-    │   ├── 2020-02-24-00-14
-    │   │   └── train_2020-02-24-00-14_rank0.log
-    │   ├── 2020-02-24-00-15
-    │   │   └── train_2020-02-24-00-15_rank0.log
-    │   ├── 2020-02-24-00-16
-    │   │   └── train_2020-02-24-00-16_rank0.log
-    │   ├── 2020-02-24-00-17
-    │   │   ├── events.out.tfevents.1582474670.n224-022-185
-    │   │   ├── InceptionResnetV1_epoch000_iter000010_checkpoint.pth
-    │   │   ├── InceptionResnetV1_epoch000_iter000020_checkpoint.pth
-    │   │   ├── model_best.pth
-    │   │   └── train_2020-02-24-00-17_rank0.log
-    │   └── 2020-02-24-00-21
-    │       ├── events.out.tfevents.1582474873.n224-022-185
-    │       ├── events.out.tfevents.1582474893.n224-022-185
-    │       └── train_2020-02-24-00-21_rank0.log
+    │   └── 2020-02-24-11-40
+    │       ├── events.out.tfevents.1582515626.n224-022-185
+    │       └── train_2020-02-24-11-40_rank0.log
     └── fcos_detector
         └── 2020-02-21-22-54
             ├── events.out.tfevents.1582296891.n224-022-185
@@ -2313,4 +2265,4 @@
             ├── FCOS_epoch222_iter002000_checkpoint.pth
             └── train_2020-02-21-22-54_rank0.log
 
-119 directories, 2194 files
+100 directories, 2165 files
