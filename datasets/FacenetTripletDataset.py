@@ -75,9 +75,7 @@ class FacenetTripletDataset(Dataset):
 
 
     def get_crop_path(self, video_name, track_id, frame_id, class_name):
-        videos_root = video_name.split('/')[-2]
-        video_real_name = video_name.split('/')[-1][7:]
-        track_path = osp.join(self.data_root, f'{videos_root}_{video_real_name}', str(track_id))
+        track_path = osp.join(self.data_root, video_name, str(track_id))
         crop_name = f'{class_name}_{frame_id}_crop.jpg'
         crop_path = osp.join(track_path, crop_name)
         return crop_path

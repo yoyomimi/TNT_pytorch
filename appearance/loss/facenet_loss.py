@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+# ------------------------------------------------------------------------------
+# Created by Mingfei Chen (lasiafly@gmail.com)
+# Created On: 2020-2-22
+# ------------------------------------------------------------------------------
 import torch
 
 def triplet_loss(anchor, positive, negative, alpha=0.3):

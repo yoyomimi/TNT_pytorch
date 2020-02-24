@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 # ------------------------------------------------------------------------------
 # Created by Mingfei Chen (lasiafly@gmail.com)
-# Created On: 2020-1-20
+# Created On: 2020-2-22
 # ------------------------------------------------------------------------------
 import argparse
+import cv2
 import math
+from tqdm import tqdm
 import os
 import os.path as osp
 
-import cv2
 import torch
-from tqdm import tqdm
 
 from configs import cfg
 from configs import update_config

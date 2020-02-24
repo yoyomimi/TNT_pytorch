@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+# ------------------------------------------------------------------------------
+# Created by Mingfei Chen (lasiafly@gmail.com)
+# Created On: 2020-2-23
+# ------------------------------------------------------------------------------
 import argparse
 import cv2
 import json
@@ -14,15 +19,19 @@ def gen_track_gt_dict(data_root, save_dirs):
     """generate track gt dict using gt label files.
         gt{
             video_name (f'{videos_root_path}_{video_name}'):{
-                track_id_0: [class_name <str>,  frame_id_list <list>, containing all the involved frame ids in sequence.],
-                track_id_1: [class_name <str>,  frame_id_list <list>, containing all the involved frame ids in sequence.]
+                track_id_0: [class_name <str>,  [frame_id_list <list> containing all the involved frame ids in sequence.], 
+                             [xmin <list>], [ymin <list>], [xmax <list>], [ymax <list>]]
+                track_id_1: [class_name <str>,  [frame_id_list <list> containing all the involved frame ids in sequence.],
+                            [xmin <list>], [ymin <list>], [xmax <list>], [ymax <list>]]]
             }
         }
         e.g.
         gt{
             "data/eval/objtrack/images_0012": {
-                "0": ["Cyclist", [0, 1, 2, 3, 4, 5]],
-                "1": ["Pedestrian", [1, 2, 3]]
+                "0": ["Cyclist", [0, 1, 2, 3, 4, 5], [xmin0, xmin1, xmin2, xmin3, xmin4, xmin5], 
+                                 [ymin0, ymin1, ymin2, ymin3, ymin4, ymin5],
+                                 [xmax0, xmax1, xmax2, xmax3, xmax4, xmax5],
+                                 [ymax0, ymax1, ymax2, ymax3, ymax4, ymax5]],
             }
         }
 
@@ -45,8 +54,8 @@ def gen_track_gt_dict(data_root, save_dirs):
         for frames_dir in images_dir_list:
             # create video_dir
             video_save_path = osp.join(save_dirs, f'{videos}_{frames_dir}')
-            gt[f'{videos_dir}_{frames_dir}'] = {}
-            gt_video = gt[f'{videos_dir}_{frames_dir}']
+            gt[f'{videos}_{frames_dir}'] = {}
+            gt_video = gt[f'{videos}_{frames_dir}']
 
             if not osp.exists(video_save_path):
                 os.mkdir(video_save_path)
@@ -63,7 +72,7 @@ def gen_track_gt_dict(data_root, save_dirs):
                     track_id = labels[1]
                     track_save_path = osp.join(video_save_path, track_id)
                     if int(track_id) not in gt_video.keys(): 
-                        gt_video[int(track_id)] = [labels[2],[]]
+                        gt_video[int(track_id)] = [labels[2], [], [], [], [], []]
                     gt_track = gt_video[int(track_id)]
                     gt_track[1].append(int(frame_id))
 
@@ -74,6 +83,8 @@ def gen_track_gt_dict(data_root, save_dirs):
                     class_label = np.array(class_dict[labels[2]]+1, dtype=np.int64).reshape(-1, 1)
                     box = np.array(labels[6:10], dtype=np.float32).reshape(-1, 4)
                     write_crop(img, box, class_label, track_save_path, frame_id=frame_id)
+                    for i in range(4):
+                        gt_track[i+2].append(str(box[0][i]))
 
     return gt
 
