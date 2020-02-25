@@ -67,8 +67,7 @@ class TrackletpairDataset(Dataset):
                     for frame_window in frame_window_list:
                         for i in range((frame_window[1]-frame_window[0])*4):
                             start_frame_id_1 = frame_window[0]
-                            end_frame_id_2 = frame_window[1]
-                            end_frame_id_1, start_frame_id_2 = sorted(random.sample(range(frame_window[0]+1, frame_window[1]-1), 2))
+                            end_frame_id_1, start_frame_id_2, end_frame_id_2 = sorted(random.sample(range(frame_window[0]+1, frame_window[1]+1), 3))
                             # write connected pair to tracklet_pair_path
                             pair_f.write(f'{video_name},{track_id},{start_frame_id_1},{end_frame_id_1},{video_name},{track_id},{start_frame_id_2},{end_frame_id_2},{1}\n')
                             pair_count += 1                 
@@ -168,16 +167,22 @@ class TrackletpairDataset(Dataset):
         img_1 = torch.stack(img_1)
         img_2 = torch.stack(img_2)
 
+        real_window_len = min(self.window_length, end_frame_id_2-start_frame_id_1+1)
+
         loc_mat[0][np.where(loc_mat[0]==0)] = 1e-3
         loc_mat[-1][np.where(loc_mat[-1]==0)] = 1e-3
         loc_mat=pd.DataFrame(data=loc_mat).replace(0, np.nan, inplace=False)
-        loc_mat = torch.from_numpy(np.array(loc_mat.interpolate()).astype(np.float32))
+        loc_mat_np = np.array(loc_mat.interpolate()).astype(np.float32)
+        if real_window_len < self.window_length:
+            loc_mat_np[real_window_len:] = np.zeros((self.window_length-real_window_len, 4))
+        loc_mat = torch.from_numpy(loc_mat_np)
 
         tracklet_mask_1 = torch.from_numpy(np.array(tracklet_mask_1).astype(np.float32))
         tracklet_mask_2 = torch.from_numpy(np.array(tracklet_mask_2).astype(np.float32))
         
+        
 
-        return img_1, img_2, loc_mat, tracklet_mask_1, tracklet_mask_2
+        return img_1, img_2, loc_mat, tracklet_mask_1, tracklet_mask_2, real_window_len 
 
 
 if __name__ == "__main__":

@@ -19,18 +19,20 @@ from configs import update_config
 
 # from datasets.data_collect import triplet_collect #TODO
 from appearance.backbones.inception_resnet_v1 import InceptionResnetV1
-from appearance.loss.facenet_loss import triplet_loss
 
 from datasets.data_collect import tracklet_pair_collect
 from datasets.TrackletpairDataset import TrackletpairDataset
 from datasets.transform import FacenetInferenceTransform
 
+from tracklets.utils.utils import get_tracklet_pair_input_features
 from utils.utils import create_logger
 from utils.utils import get_model
 from utils.utils import get_optimizer
 from utils.utils import get_lr_scheduler
 from utils.utils import get_trainer
 from utils.utils import load_checkpoint
+from utils.utils import load_eval_model
+
 
 
 def parse_args():
@@ -94,12 +96,16 @@ def main_per_worker(process_index, ngpus_per_node, args):
     # logger.info(pprint.pformat(args))
     # logger.info(cfg)
     
-    model = get_model(cfg, cfg.MODEL.FILE, cfg.MODEL.NAME)  
+    model = get_model(cfg, cfg.MODEL.FILE, cfg.MODEL.NAME) 
+
+    emb = InceptionResnetV1(pretrained='vggface2', classify=False)
+    assert cfg.MODEL.APPEARANCE.WEIGHTS != ''
+    load_eval_model(cfg.MODEL.APPEARANCE.WEIGHTS, emb)
 
     # TODO change based on the paper
-    optimizer = get_optimizer(cfg, model)
-    model, optimizer, last_iter = load_checkpoint(cfg, model, optimizer)
-    lr_scheduler = get_lr_scheduler(cfg, optimizer, last_iter)
+    # optimizer = get_optimizer(cfg, model)
+    # model, optimizer, last_iter = load_checkpoint(cfg, model, optimizer)
+    # lr_scheduler = get_lr_scheduler(cfg, optimizer, last_iter)
 
     transform = FacenetInferenceTransform(size=(cfg.TRAIN.INPUT_MIN, cfg.TRAIN.INPUT_MAX))
     train_dataset = TrackletpairDataset(cfg.DATASET.ROOT, transform=transform, is_train=True)
@@ -121,8 +127,12 @@ def main_per_worker(process_index, ngpus_per_node, args):
         )
         torch.cuda.set_device(process_index)
         model.cuda()
+        emb.cuda()
         model = torch.nn.parallel.DistributedDataParallel(
             model, device_ids=[process_index]
+        )
+        emb = torch.nn.parallel.DistributedDataParallel(
+            emb, device_ids=[process_index]
         )
         train_sampler = torch.utils.data.distributed.DistributedSampler(
             train_dataset
@@ -133,6 +143,7 @@ def main_per_worker(process_index, ngpus_per_node, args):
         assert proc_rank == 0, ('proc_rank != 0, it will influence '
                                 'the evaluation procedure')
         model = torch.nn.DataParallel(model).cuda()
+        emb = torch.nn.DataParallel(emb).cuda()
         train_sampler = None
         batch_size = cfg.DATASET.IMG_NUM_PER_GPU * ngpus_per_node
     
@@ -155,17 +166,21 @@ def main_per_worker(process_index, ngpus_per_node, args):
         collate_fn=tracklet_pair_collect,
         num_workers=cfg.WORKERS
     )
+    
 
+    # 写进trainer
+    tracklet_pair_features = torch.zeros(batch_size, cfg.TRACKLET.WINDOW_lEN, cfg.MODEL.APPEARANCE.EMB_SIZE).cuda(non_blocking=True)
+    emb.eval()
     for data in train_loader:
         model.train()
-        img_1, img_2, loc_mat, tracklet_mask_1, tracklet_mask_2 = data
+        img_1, img_2, loc_mat, tracklet_mask_1, tracklet_mask_2, real_window_len = data
         img_1 = [img.cuda(non_blocking=True) for img in img_1]
         img_2 = [img.cuda(non_blocking=True) for img in img_2]
-
         loc_mat = loc_mat.cuda(non_blocking=True)
         tracklet_mask_1 = tracklet_mask_1.cuda(non_blocking=True)
         tracklet_mask_2 = tracklet_mask_2.cuda(non_blocking=True)
-        model(img_1, img_2, loc_mat, tracklet_mask_1, tracklet_mask_2)
+        tracklet_pair_features = get_tracklet_pair_input_features(emb, img_1, img_2, loc_mat,
+            tracklet_mask_1, tracklet_mask_2, real_window_len, tracklet_pair_features)
         break
     # criterion = triplet_loss
 
