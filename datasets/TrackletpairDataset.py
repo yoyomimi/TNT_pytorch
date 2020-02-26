@@ -111,6 +111,8 @@ class TrackletpairDataset(Dataset):
             loc_mat: (frame_window_len, 4)
             tracklet_mask_1: (frame_window_len, 1).
             tracklet_mask_2: (frame_window_len, 1).
+            real_window_len: <int>
+            connectivity: (1, 1) LongTensor
         """
         tracklet_info = self.tracklet_path_list[index].split()[0].split(',')
         video_name_1,track_id_1,start_frame_id_1,end_frame_id_1 = tracklet_info[:4]
@@ -139,8 +141,8 @@ class TrackletpairDataset(Dataset):
             frame_idx = tracklet_info_1[1].index(frame_id)
             loc_mat[frame_id-start_frame_id_1][0] = float(tracklet_info_1[2][frame_idx])
             loc_mat[frame_id-start_frame_id_1][1] = float(tracklet_info_1[3][frame_idx])
-            loc_mat[frame_id-start_frame_id_1][2] = float(tracklet_info_1[4][frame_idx])
-            loc_mat[frame_id-start_frame_id_1][3] = float(tracklet_info_1[5][frame_idx])
+            loc_mat[frame_id-start_frame_id_1][2] = float(tracklet_info_1[4][frame_idx]) - float(tracklet_info_1[2][frame_idx])
+            loc_mat[frame_id-start_frame_id_1][3] = float(tracklet_info_1[5][frame_idx]) - float(tracklet_info_1[3][frame_idx])
             tracklet_mask_1[frame_id-start_frame_id_1] = 1
         
         # get img_2, loc_mat for img2 and tracklet_mask_2
@@ -160,8 +162,8 @@ class TrackletpairDataset(Dataset):
             frame_idx = tracklet_info_2[1].index(frame_id)
             loc_mat[frame_id-start_frame_id_1][0] = float(tracklet_info_2[2][frame_idx])
             loc_mat[frame_id-start_frame_id_1][1] = float(tracklet_info_2[3][frame_idx])
-            loc_mat[frame_id-start_frame_id_1][2] = float(tracklet_info_2[4][frame_idx])
-            loc_mat[frame_id-start_frame_id_1][3] = float(tracklet_info_2[5][frame_idx])
+            loc_mat[frame_id-start_frame_id_1][2] = float(tracklet_info_2[4][frame_idx]) - float(tracklet_info_2[2][frame_idx])
+            loc_mat[frame_id-start_frame_id_1][3] = float(tracklet_info_2[5][frame_idx]) - float(tracklet_info_2[3][frame_idx])
             tracklet_mask_2[frame_id-start_frame_id_1] = 1
         
         img_1 = torch.stack(img_1)
@@ -179,10 +181,11 @@ class TrackletpairDataset(Dataset):
 
         tracklet_mask_1 = torch.from_numpy(np.array(tracklet_mask_1).astype(np.float32))
         tracklet_mask_2 = torch.from_numpy(np.array(tracklet_mask_2).astype(np.float32))
+        connectivity = torch.from_numpy(np.array(int(connectivity))).reshape(-1, 1)
         
         
 
-        return img_1, img_2, loc_mat, tracklet_mask_1, tracklet_mask_2, real_window_len 
+        return img_1, img_2, loc_mat, tracklet_mask_1, tracklet_mask_2, real_window_len, connectivity
 
 
 if __name__ == "__main__":

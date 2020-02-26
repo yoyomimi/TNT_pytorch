@@ -1,6 +1,6 @@
-OUTPUT_ROOT: facenet_triplet_appearance
+OUTPUT_ROOT: trackletpair_connectivity
 DIST_BACKEND: 'nccl'
-PI: 'triplet_loss'
+PI: 'acc'
 WORKERS: 4
 CUDNN:
   BENCHMARK: True
@@ -14,8 +14,14 @@ DATASET:
 MODEL:
   FILE: tracklet_connectivity
   NAME: TrackletConnectivity
+  CONNECTIVITY:
+    KERNEL_SIZE: [3, 5, 9, 13]
+    FEAT_CHANNELS: [16, 64, 128]
+    STACK_NUM: 3
   APPEARANCE:
     WEIGHTS: '/mnt/cephfs_new_wj/cv/chenmingfei.lasia/TNT_pytorch/work_dirs/facenet_triplet_appearance/2020-02-24-11-40/InceptionResnetV1_epoch012_iter001500_checkpoint.pth'
+TRACKLET:
+  WINDOW_lEN: 64
 TRAINER:
   FILE: appearanceTrainer
   NAME: appearanceTrainer

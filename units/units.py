@@ -69,15 +69,14 @@ def seperable_conv2d(in_channels,
     )
 
 def fcoshead_conv2d(in_channels,
-                out_channels,
-                kernel_size,
-                stride=1,
-                padding=0,
-                dilation=1,
-                groups=1,
-                #GNgropus=32,
-                GNgropus=16,
-                bias=False):
+                    out_channels,
+                    kernel_size,
+                    stride=1,
+                    padding=0,
+                    dilation=1,
+                    groups=1,
+                    GNgropus=16,
+                    bias=False):
     #TODO init
     return nn.Sequential(
         nn.Conv2d(
@@ -93,14 +92,15 @@ def fcoshead_conv2d(in_channels,
         nn.ReLU(),
     )
 
+
 def fcosfpn_conv2d(in_channels,
-                out_channels,
-                kernel_size,
-                stride=1,
-                padding=0,
-                dilation=1,
-                groups=1,
-                bias=True):
+                   out_channels,
+                   kernel_size,
+                   stride=1,
+                   padding=0,
+                   dilation=1,
+                   groups=1,
+                   bias=True):
     #无norm,bias为True
     #fpn top-down不使用非线性activation函数  
     #TODO init  
@@ -115,6 +115,36 @@ def fcosfpn_conv2d(in_channels,
             dilation=dilation,
             bias=bias),
     )
+
+
+def tracklet_conv2d_with_maxpool(in_channels,
+                                 out_channels,
+                                 ks_kernel_size,
+                                 pool_kernel_size=(1,3),
+                                 pool_stride=(1,2),
+                                 ks_stride=(1,1),
+                                 padding=(0,0),
+                                 dilation=1,
+                                 groups=1,
+                                 bias=True):
+    #无norm,bias为True 
+    return nn.Sequential(
+        nn.Conv2d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=ks_kernel_size,
+            groups=groups,
+            stride=ks_stride,
+            padding=(dilation * (ks_kernel_size[0] - 1) // 2, dilation * (ks_kernel_size[1] - 1) // 2),
+            dilation=dilation,
+            bias=bias),
+        nn.ReLU(inplace=True),
+        nn.MaxPool2d(kernel_size=pool_kernel_size, 
+            stride=pool_stride,
+            padding=(dilation * (pool_kernel_size[0] - 1) // 2, dilation * (pool_kernel_size[1] - 1) // 2),),
+    )
+
+
 
 
 def conv_bn_relu(inp, oup, stride):

@@ -10,6 +10,7 @@ import random
 
 import pprint
 import torch
+from torch import nn
 import torch.backends.cudnn as cudnn
 import torch.distributed as dist
 
@@ -17,14 +18,11 @@ import _init_paths
 from configs import cfg
 from configs import update_config
 
-# from datasets.data_collect import triplet_collect #TODO
 from appearance.backbones.inception_resnet_v1 import InceptionResnetV1
-
 from datasets.data_collect import tracklet_pair_collect
 from datasets.TrackletpairDataset import TrackletpairDataset
 from datasets.transform import FacenetInferenceTransform
 
-from tracklets.utils.utils import get_tracklet_pair_input_features
 from utils.utils import create_logger
 from utils.utils import get_model
 from utils.utils import get_optimizer
@@ -103,9 +101,9 @@ def main_per_worker(process_index, ngpus_per_node, args):
     load_eval_model(cfg.MODEL.APPEARANCE.WEIGHTS, emb)
 
     # TODO change based on the paper
-    # optimizer = get_optimizer(cfg, model)
-    # model, optimizer, last_iter = load_checkpoint(cfg, model, optimizer)
-    # lr_scheduler = get_lr_scheduler(cfg, optimizer, last_iter)
+    optimizer = get_optimizer(cfg, model)
+    model, optimizer, last_iter = load_checkpoint(cfg, model, optimizer)
+    lr_scheduler = get_lr_scheduler(cfg, optimizer, last_iter)
 
     transform = FacenetInferenceTransform(size=(cfg.TRAIN.INPUT_MIN, cfg.TRAIN.INPUT_MAX))
     train_dataset = TrackletpairDataset(cfg.DATASET.ROOT, transform=transform, is_train=True)
@@ -167,39 +165,26 @@ def main_per_worker(process_index, ngpus_per_node, args):
         num_workers=cfg.WORKERS
     )
     
+        
+    criterion = nn.BCELoss()
 
-    # 写进trainer
-    tracklet_pair_features = torch.zeros(batch_size, cfg.TRACKLET.WINDOW_lEN, cfg.MODEL.APPEARANCE.EMB_SIZE).cuda(non_blocking=True)
-    emb.eval()
-    for data in train_loader:
-        model.train()
-        img_1, img_2, loc_mat, tracklet_mask_1, tracklet_mask_2, real_window_len = data
-        img_1 = [img.cuda(non_blocking=True) for img in img_1]
-        img_2 = [img.cuda(non_blocking=True) for img in img_2]
-        loc_mat = loc_mat.cuda(non_blocking=True)
-        tracklet_mask_1 = tracklet_mask_1.cuda(non_blocking=True)
-        tracklet_mask_2 = tracklet_mask_2.cuda(non_blocking=True)
-        tracklet_pair_features = get_tracklet_pair_input_features(emb, img_1, img_2, loc_mat,
-            tracklet_mask_1, tracklet_mask_2, real_window_len, tracklet_pair_features)
-        break
-    # criterion = triplet_loss
+    Trainer = get_trainer(
+        cfg,
+        model,
+        optimizer,
+        lr_scheduler,
+        criterion,
+        output_dir,
+        last_iter,
+        proc_rank,
+        pre_ap_model=emb,
+    )
 
-    # Trainer = get_trainer(
-    #     cfg,
-    #     model,
-    #     optimizer,
-    #     lr_scheduler,
-    #     criterion,
-    #     output_dir,
-    #     last_iter,
-    #     proc_rank,
-    # )
-
-    # while True:
-    #     Trainer.train(train_loader, eval_loader)
+    while True:
+        Trainer.train(train_loader, eval_loader)
 
     # eval
-    # Trainer.evaluate(eval_loader)
+    Trainer.evaluate(eval_loader)
 
 
 if __name__ == '__main__':

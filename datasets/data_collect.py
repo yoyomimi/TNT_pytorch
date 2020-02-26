@@ -42,6 +42,7 @@ def tracklet_pair_collect(batch):
     tracklet_mask_1 = []
     tracklet_mask_2 = []
     real_window_len = []
+    connectivity = []
 
     for sample in batch:
         imgs_1.append(sample[0])
@@ -50,5 +51,7 @@ def tracklet_pair_collect(batch):
         tracklet_mask_1.append(sample[3])
         tracklet_mask_2.append(sample[4])
         real_window_len.append(sample[5])
+        connectivity.append(sample[6])
         
-    return imgs_1, imgs_2, torch.stack(loc_mat, 0),  torch.stack(tracklet_mask_1, 0),  torch.stack(tracklet_mask_2, 0), real_window_len
+    return imgs_1, imgs_2, torch.stack(loc_mat, 0),  torch.stack(tracklet_mask_1, 0),  
+        torch.stack(tracklet_mask_2, 0), real_window_len, torch.stack(connectivity, 0)

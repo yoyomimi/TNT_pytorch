@@ -32,7 +32,6 @@ class appearanceTrainer(BaseTrainer):
         self.use_triplet = use_triplet
 
     def _read_inputs(self, inputs):
-        # post transform for identifier
         anchor_imgs, pos_imgs, neg_imgs = inputs
         anchor_imgs = anchor_imgs.cuda(non_blocking=True)
         pos_imgs = pos_imgs.cuda(non_blocking=True)
