@@ -22,9 +22,6 @@ MODEL:
     WEIGHTS: '/mnt/cephfs_new_wj/cv/chenmingfei.lasia/TNT_pytorch/work_dirs/facenet_triplet_appearance/2020-02-24-11-40/InceptionResnetV1_epoch012_iter001500_checkpoint.pth'
 TRACKLET:
   WINDOW_lEN: 64
-TRAINER:
-  FILE: appearanceTrainer
-  NAME: appearanceTrainer
 TRAIN:
   LR: 0.001
   LR_FACTOR: 0.1
@@ -36,8 +33,8 @@ TRAIN:
   RESUME: True
   INPUT_MIN: 182
   INPUT_MAX: 182 
-  PRINT_FREQ: 100
-  SAVE_INTERVAL: 500
+  PRINT_FREQ: 5 #100
+  SAVE_INTERVAL: 10 #500
   SAVE_EVERY_CHECKPOINT: True
   VAL_WHEN_TRAIN: False
 TEST:

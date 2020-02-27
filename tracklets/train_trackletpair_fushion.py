@@ -4,6 +4,7 @@
 # Created On: 2020-2-24
 # ------------------------------------------------------------------------------
 import os
+import importlib
 
 import argparse
 import random
@@ -19,6 +20,7 @@ from configs import cfg
 from configs import update_config
 
 from appearance.backbones.inception_resnet_v1 import InceptionResnetV1
+from tracklets.trainer.trackletpair_fushion_trainer import trackletpairConnectTrainer
 from datasets.data_collect import tracklet_pair_collect
 from datasets.TrackletpairDataset import TrackletpairDataset
 from datasets.transform import FacenetInferenceTransform
@@ -27,7 +29,6 @@ from utils.utils import create_logger
 from utils.utils import get_model
 from utils.utils import get_optimizer
 from utils.utils import get_lr_scheduler
-from utils.utils import get_trainer
 from utils.utils import load_checkpoint
 from utils.utils import load_eval_model
 
@@ -168,7 +169,7 @@ def main_per_worker(process_index, ngpus_per_node, args):
         
     criterion = nn.BCELoss()
 
-    Trainer = get_trainer(
+    Trainer = trackletpairConnectTrainer(
         cfg,
         model,
         optimizer,
@@ -180,8 +181,8 @@ def main_per_worker(process_index, ngpus_per_node, args):
         pre_ap_model=emb,
     )
 
-    while True:
-        Trainer.train(train_loader, eval_loader)
+    # while True:
+    #     Trainer.train(train_loader, eval_loader)
 
     # eval
     Trainer.evaluate(eval_loader)

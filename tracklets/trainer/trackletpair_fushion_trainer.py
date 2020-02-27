@@ -4,6 +4,7 @@
 # Created On: 2020-1-20
 # ------------------------------------------------------------------------------
 import logging
+import numpy as np
 from tqdm import tqdm
 
 import torch
@@ -11,7 +12,6 @@ import torch.nn.functional as F
 
 from tracklets.utils.utils import get_tracklet_pair_input_features
 from units.trainer import BaseTrainer
-
 
 
 class trackletpairConnectTrainer(BaseTrainer):
@@ -35,11 +35,12 @@ class trackletpairConnectTrainer(BaseTrainer):
         self.pre_ap_model = pre_ap_model
 
     def _read_inputs(self, inputs):
-        tracklet_pair_features = torch.zeros(batch_size, self.cfg.TRACKLET.WINDOW_lEN, self.cfg.MODEL.APPEARANCE.EMB_SIZE).cuda(non_blocking=True)
         img_1, img_2, loc_mat, tracklet_mask_1, tracklet_mask_2, real_window_len, targets = inputs
+        tracklet_pair_features = torch.zeros(len(targets), self.cfg.TRACKLET.WINDOW_lEN, self.cfg.MODEL.APPEARANCE.EMB_SIZE).cuda(non_blocking=True)
         img_1 = [img.cuda(non_blocking=True) for img in img_1]
         img_2 = [img.cuda(non_blocking=True) for img in img_2]
         loc_mat = loc_mat.cuda(non_blocking=True)
+        targets = targets.cuda(non_blocking=True)
         tracklet_mask_1 = tracklet_mask_1.cuda(non_blocking=True)
         tracklet_mask_2 = tracklet_mask_2.cuda(non_blocking=True)
         if self.pre_ap_model:
@@ -62,15 +63,19 @@ class trackletpairConnectTrainer(BaseTrainer):
     def evaluate(self, eval_loader):
         self.model.eval()
         acc = 0.0
+        count = 0
         for data in tqdm(eval_loader):
+            count = count + 1
+            if count > 1:
+                break
             tracklet_pair_features, targets = self._read_inputs(data)
             cls_score = self.model(tracklet_pair_features).data.cpu()
-            pred = cls_score.ge(0.5)
-            true = pred.eq(targets.data.view_as(pred))
-            acc += true.sum() / len(pred)
-        acc /= len(eval_loader)
+            pred = cls_score.ge(0.5).type(torch.FloatTensor)
+            true = pred.eq(targets.data.cpu().view_as(pred)).numpy()
+            acc += np.sum(true) / len(pred)
+        acc /= min(count, len(eval_loader))
         logging.info(f'Pred tracklet pair connectivity accuracy:{acc}')
-        print(f"acc : {acc}")
+        print(f"acc : %.3f" %(acc))
 
         return acc
 
