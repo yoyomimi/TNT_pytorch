@@ -181,8 +181,8 @@ def main_per_worker(process_index, ngpus_per_node, args):
         pre_ap_model=emb,
     )
 
-    # while True:
-    #     Trainer.train(train_loader, eval_loader)
+    while True:
+        Trainer.train(train_loader, eval_loader)
 
     # eval
     Trainer.evaluate(eval_loader)

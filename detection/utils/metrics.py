@@ -4,6 +4,7 @@
 # Created On: 2020-1-20
 # ------------------------------------------------------------------------------
 import cv2
+import math
 import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
@@ -173,7 +174,7 @@ def eval_fcos_det(cfg, criterion, eval_loader,
     return mAP, aps, pr_curves
 
 @torch.no_grad()
-def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=None, is_crop=False):
+def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=None, is_crop=False, ap_transform=None):
     model.eval()
     if demo_frame is None:
         orig_image = cv2.imread(jpg_path, cv2.IMREAD_COLOR)
@@ -200,12 +201,17 @@ def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=
         2: 'Car',
         3: 'Cyclist',
     }
+    crop_img = []
+
     for i in range(boxes.size(0)):
         box = boxes[i]
         box[0:4:2] = box[0:4:2] / new_w * w
         box[1:4:2] = box[1:4:2] / new_h * h
         new_boxes.append(box.cpu().data.numpy())
-        if demo_frame is None and is_crop == False:
+        if ap_transform:
+            # crop img
+            crop_img.append(ap_transform(orig_image[math.floor(box[1]):math.ceil(box[3]), math.floor(box[0]):math.ceil(box[2]), :]))
+        elif demo_frame is None and is_crop == False and is_cluster == False:
             cv2.rectangle(orig_image, (box[0], box[1]),
                          (box[2], box[3]), (0, 255, 9), 4)
             label_idx = int(labels[i])
@@ -224,6 +230,9 @@ def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=
 
     if demo_frame is not None or is_crop:
         return orig_image, np.array(new_boxes), labels.cpu().data.numpy()
+
+    if ap_transform:
+        return torch.stack(crop_img), np.array(new_boxes), labels.cpu().data.numpy()
 
     return orig_image
 

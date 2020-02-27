@@ -1,5 +1,5 @@
 # training
-CUDA_VISIBLE_DEVICE=0 python detection/train_det.py --cfg configs/fcos_detector.yaml WORKERS 10 MODEL.BACKBONE.WEIGHTS /mnt/cephfs_new_wj/cv/chenmingfei.lasia/TNT_pytorch/data/R-50.pkl
+CUDA_VISIBLE_DEVICE=0 python3 detection/train_det.py --cfg configs/fcos_detector.yaml WORKERS 10 MODEL.BACKBONE.WEIGHTS /mnt/cephfs_new_wj/cv/chenmingfei.lasia/TNT_pytorch/data/R-50.pkl
 
 # eval
 CUDA_VISIBLE_DEVICE=0 python3 detection/eval_det.py --cfg configs/fcos_detector.yaml \
