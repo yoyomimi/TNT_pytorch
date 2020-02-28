@@ -202,6 +202,7 @@ def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=
         3: 'Cyclist',
     }
     crop_img = []
+    mean_color = []
 
     for i in range(boxes.size(0)):
         box = boxes[i]
@@ -210,7 +211,12 @@ def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=
         new_boxes.append(box.cpu().data.numpy())
         if ap_transform:
             # crop img
-            crop_img.append(ap_transform(orig_image[math.floor(box[1]):math.ceil(box[3]), math.floor(box[0]):math.ceil(box[2]), :]))
+            im = orig_image[math.floor(box[1]):math.ceil(box[3]), math.floor(box[0]):math.ceil(box[2]), :]
+            crop_img.append(ap_transform(im))
+            now_mean_color = np.zeros(3)
+            for i in range(3):
+                now_mean_color[i] = np.mean(im[:,:,i]) / 255.0
+            mean_color.append(now_mean_color)
         elif demo_frame is None and is_crop == False and is_cluster == False:
             cv2.rectangle(orig_image, (box[0], box[1]),
                          (box[2], box[3]), (0, 255, 9), 4)
@@ -232,7 +238,7 @@ def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=
         return orig_image, np.array(new_boxes), labels.cpu().data.numpy()
 
     if ap_transform:
-        return torch.stack(crop_img), np.array(new_boxes), labels.cpu().data.numpy()
+        return torch.stack(crop_img), np.array(new_boxes), labels.cpu().data.numpy(), np.vstack(mean_color)
 
     return orig_image
 

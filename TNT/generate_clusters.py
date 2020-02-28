@@ -86,8 +86,8 @@ if __name__ == '__main__':
         if jpg_path.split('.')[-1].lower() not in ['jpg', 'png', 'jpeg', 'bmp']:
             continue
         frame_id = int(jpg_path.split('.')[-2].split('/')[-1]) # start from 0
-        # img:(min_size, max_size, 3), boxes:(obj_num, 4), labels:(obj_num,) numpy type
-        img, boxes, labels = run_fcos_det_example(cfg,
+        # img:(min_size, max_size, 3), boxes:(obj_num, 4), labels:(obj_num,) numpy type, mean_color <list> list of array(3)
+        img, boxes, labels, mean_color = run_fcos_det_example(cfg,
             criterion,
             jpg_path,
             det_transform,
@@ -98,14 +98,15 @@ if __name__ == '__main__':
         boxes[:, 3] = boxes[:, 3] - boxes[:, 1] # h
         img = img.cuda(non_blocking=True)
         img_embs = get_embeddings(emb, img).cpu().data.numpy()
-        assert len(img_embs) == len(boxes) == len(labels)
+        assert len(img_embs) == len(boxes) == len(labels) == len(mean_color)
         obj_num = len(img_embs)
-        # {'frame_id': (obj_num, emb_size+4+1) emb x y w h label(float)}
-        det_result[frame_id] = np.zeros((obj_num, emb_size+4+1))
+        # {'frame_id': (obj_num, emb_size+4+1+3) emb x y w h label(float) mean_color(array(3))}
+        det_result[frame_id] = np.zeros((obj_num, emb_size+4+1+3))
         det_result[frame_id][:, :emb_size] = img_embs
         det_result[frame_id][:, emb_size: emb_size+4] = boxes
         det_result[frame_id][:, emb_size+4] = labels
-
+        det_result[frame_id][:, emb_size+5:] = mean_color
+    
     # use coarse constriant to get coarse track dict
     coarse_track_dict = merge_det(det_result)
 
