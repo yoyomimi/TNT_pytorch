@@ -11,11 +11,40 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 
 from clusters.utils.tracklet_connect import define_coarse_tracklet_connections
+from tracklets.utils.trackletpair_connect import pred_connect_with_fusion
+
+def update_neighbor_use_net(coarse_track_dict, coarse_tracklet_connects, emb_size, slide_window_len=60):
+    track_set = []
+    # get track set using net: (coarse_tracklet_id1, coarse_tracklet_id2, pred_connectivity), id1 is in the front
+    track_set = pred_connect_with_fusion(coarse_track_dict, slide_window_len) #implement in tracklet.utils, sample, pred and save
+    
+    for n in range(len(track_set)):
+        track_id_1 = int(track_set[n, 0])
+        track_id_2 = int(track_set[n, 1])
+        if track_set[n, 2] == 1: # connected tracklets, should be neighbors
+            max_t_id_1 = np.max(np.where(coarse_track_dict[track_id_1][:, emb_size]!=-1)[0])
+            min_t_id_2 = np.min(np.where(coarse_track_dict[track_id_2][:, emb_size]!=-1)[0])
+            # TODO what about connective but much overlap? Will net be more reliable?
+            if abs(min_t_id_2 - max_t_id_1) > slide_window_len: # not in a sliding window 
+                continue
+            if track_id_1 not in coarse_tracklet_connects[track_id_2]['neighbor']:
+                coarse_tracklet_connects[track_id_2]['neighbor'].append(track_id_1)
+                coarse_tracklet_connects[track_id_1]['neighbor'].append(track_id_2)
+            if track_id_1 not in coarse_tracklet_connects[track_id_2]['conflict']:
+                coarse_tracklet_connects[track_id_2]['conflict'].remove(track_id_1)
+                coarse_tracklet_connects[track_id_1]['conflict'].remove(track_id_2)
+        else: # should be conflict (neighbor in time, but not neighbor in tracklets)
+            if track_id_1 not in coarse_tracklet_connects[track_id_2]['neighbor']:
+                coarse_tracklet_connects[track_id_2]['neighbor'].remove(track_id_1)
+                coarse_tracklet_connects[track_id_1]['neighbor'].remove(track_id_2)
+            if track_id_1 not in coarse_tracklet_connects[track_id_2]['conflict']:
+                coarse_tracklet_connects[track_id_2]['conflict'].append(track_id_1)
+                coarse_tracklet_connects[track_id_1]['conflict'].append(track_id_2)
 
 
-# add in config: time_dist_tresh, time_margin, time_cluster_dist, track_overlap_thresh, search_radius, clip_len
+# add in config: time_dist_tresh, time_margin, time_cluster_dist, track_overlap_thresh, search_radius, clip_len, slide_window_len
 def init_clustering(coarse_track_dict, remove_set=[], time_dist_tresh=11, time_margin=3, time_cluster_dist=24,
-                    track_overlap_thresh=0.1, search_radius=1, clip_len=6):
+                    track_overlap_thresh=0.1, search_radius=1, clip_len=6, slide_window_len=60):
     """init time clusters and track clusters based on coarse_track_dict.
        
        Args: 
@@ -29,6 +58,7 @@ def init_clustering(coarse_track_dict, remove_set=[], time_dist_tresh=11, time_m
             track_overlap_thresh: .
             search_radius: .
             clip_len: .
+            slide_window_len: .
 
        Return: 
             time_cluster_dict <dict> {
@@ -68,8 +98,11 @@ def init_clustering(coarse_track_dict, remove_set=[], time_dist_tresh=11, time_m
     coarse_tracklet_connects = define_coarse_tracklet_connections(coarse_track_dict, emb_size,
         track_overlap_thresh, search_radius, clip_len)
 
+    coarse_tracklet_connects = update_neighbor_use_net(coarse_track_dict, coarse_tracklet_connects, emb_size, slide_window_len)
+
     # init track cluster
     track_cluster_dict = {}
+
     
     return time_cluster_dict, track_cluster_t_dict, track_cluster_dict
 
