@@ -3,9 +3,15 @@
 # Created by Mingfei Chen (lasiafly@gmail.com)
 # Created On: 2020-2-27
 # ------------------------------------------------------------------------------
+
+# delete if not debug
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 import numpy as np
 
-from TNT.utils.pred_loc import pred_bbox_by_F, linear_pred
+from tracklets.utils.pred_loc import pred_bbox_by_F, linear_pred
 from TNT.utils.detbbox_utils import get_overlap
 
 
@@ -53,13 +59,14 @@ def merge_det(det_dict, linear_pred_thresh=5, mean_color_thresh=0.05, pred_loc_i
     track_dict = {}
     frame_num = max(list([int(id) for id in det_dict.keys()])) + 1
     now_obj_num, feat_size = det_dict[0].shape
-    emb_size = feat_size - 4 - 1 - 3
+    feat_size -= 3
+    emb_size = feat_size - 4 - 1
 
     # init tracklet using the first frame
     new_track_id = []
     for track_id in range(now_obj_num):
         track_dict[track_id] = np.zeros((frame_num, feat_size))-1 # set -1 for initial
-        track_dict[track_id][0] = det_dict[0][track_id]
+        track_dict[track_id][0] = det_dict[0][track_id][:-3]
         new_track_id.append(track_id)
     max_track_id = new_track_id[-1]
     
@@ -119,7 +126,7 @@ def merge_det(det_dict, linear_pred_thresh=5, mean_color_thresh=0.05, pred_loc_i
         if len(track_idx1) == 0:
             for track_id in range(max_track_id+1, max_track_id+now_obj_num+1):
                 track_dict[track_id] = np.zeros((frame_num, feat_size))-1 # set -1 for initial
-                track_dict[track_id][i] = det_dict[i][track_id-max_track_id-1]
+                track_dict[track_id][i] = det_dict[i][track_id-max_track_id-1][:-3]
                 new_track_id.append(track_id)
             max_track_id = new_track_id[-1]
         elif len(track_idx1) > 0:
@@ -130,14 +137,14 @@ def merge_det(det_dict, linear_pred_thresh=5, mean_color_thresh=0.05, pred_loc_i
                     # create new track
                     track_id = max_track_id + 1
                     track_dict[track_id] = np.zeros((frame_num, feat_size))-1 # set -1 for initial
-                    track_dict[track_id][i] = det_dict[i][obj_id]
+                    track_dict[track_id][i] = det_dict[i][obj_id][:-3]
                     new_track_id.append(track_id)
                     max_track_id += 1
                 elif len(temp_idx) > 0:
                     # mearge to existed track
                     obj_id_1 = track_idx1[temp_idx[0]]
                     track_id = pre_track_id[obj_id_1] # idx of track_idx in the front matches more
-                    track_dict[track_id][i] = det_dict[i][obj_id]
+                    track_dict[track_id][i] = det_dict[i][obj_id][:-3]
                     new_track_id.append(track_id)
                     
     print('coarse_track_num', max_track_id+1)
@@ -145,15 +152,11 @@ def merge_det(det_dict, linear_pred_thresh=5, mean_color_thresh=0.05, pred_loc_i
     
 
 if __name__ == "__main__":
-    # import os
-    # import os.path as osp
-    # import sys
-    # sys.path.append(osp.join(osp.dirname(sys.path[0])))
-    # from utils.pred_loc import pred_bbox_by_F, linear_pred
-    # from utils.detbbox_utils import get_overlap
-
     import json
     import numpy as np
+
+    from utils.utils import write_dict_to_json
+    
 
     # read det_results
     det_dict = {}
@@ -163,6 +166,6 @@ if __name__ == "__main__":
         det_dict[int(frame_id)] = np.array(temp_dict[frame_id], dtype=np.float32)
 
     track_dict = merge_det(det_dict)
-    for track_id in track_dict.keys():
-        print(track_id, len(np.where(track_dict[track_id][:, 512]!=-1)[0]))
+    
+    write_dict_to_json(track_dict, 'data/coarse_tracklet.json')
     

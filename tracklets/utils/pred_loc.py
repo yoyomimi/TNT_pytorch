@@ -98,3 +98,15 @@ def linear_pred(x):
         y = np.array(range(len(x)))
         slope, intercept, _, _, _ = stats.linregress(x, y)
         return slope * len(y) + intercept
+
+
+def linear_pred_v2(tr_t, tr_y, ts_t):
+    """use (tr_t, tr_y) pred ts_y when ts_t in a linear way
+    """
+    ts_y = np.ones(len(ts_t))
+    if len(tr_t)==1:
+        ts_y = ts_y*tr_y
+    else:
+        slope, intercept, _, _, _ = stats.linregress(tr_t, tr_y)
+        ts_y = slope * ts_t + intercept
+    return ts_y
