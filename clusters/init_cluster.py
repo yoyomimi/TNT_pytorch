@@ -13,6 +13,7 @@ import numpy as np
 from clusters.utils.tracklet_connect import define_coarse_tracklet_connections
 from tracklets.utils.trackletpair_connect import pred_connect_with_fusion
 
+
 def update_neighbor_use_net(coarse_track_dict, coarse_tracklet_connects, emb_size, slide_window_len=60):
     track_set = []
     # get track set using net: (coarse_tracklet_id1, coarse_tracklet_id2, pred_connectivity), id1 is in the front
