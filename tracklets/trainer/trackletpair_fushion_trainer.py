@@ -66,11 +66,11 @@ class trackletpairConnectTrainer(BaseTrainer):
         count = 0
         for data in tqdm(eval_loader):
             count = count + 1
-            if count > 1:
+            if count > 2:
                 break
             tracklet_pair_features, targets = self._read_inputs(data)
-            cls_score = self.model(tracklet_pair_features).data.cpu()
-            pred = cls_score.ge(0.5).type(torch.FloatTensor)
+            cls_score = self.model(tracklet_pair_features).sigmoid().data.cpu() 
+            pred = cls_score.max(1, keepdim=True)[1]
             true = pred.eq(targets.data.cpu().view_as(pred)).numpy()
             acc += np.sum(true) / len(pred)
         acc /= min(count, len(eval_loader))

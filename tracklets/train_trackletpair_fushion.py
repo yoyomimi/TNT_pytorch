@@ -24,6 +24,7 @@ from tracklets.trainer.trackletpair_fushion_trainer import trackletpairConnectTr
 from datasets.data_collect import tracklet_pair_collect
 from datasets.TrackletpairDataset import TrackletpairDataset
 from datasets.transform import FacenetInferenceTransform
+from datasets.sampler import BalancedBatchSampler
 
 from utils.utils import create_logger
 from utils.utils import get_model
@@ -133,7 +134,7 @@ def main_per_worker(process_index, ngpus_per_node, args):
         emb = torch.nn.parallel.DistributedDataParallel(
             emb, device_ids=[process_index]
         )
-        train_sampler = torch.utils.data.distributed.DistributedSampler(
+        train_sampler = BalancedBatchSampler(
             train_dataset
         )
         batch_size = cfg.DATASET.IMG_NUM_PER_GPU
@@ -143,7 +144,9 @@ def main_per_worker(process_index, ngpus_per_node, args):
                                 'the evaluation procedure')
         model = torch.nn.DataParallel(model).cuda()
         emb = torch.nn.DataParallel(emb).cuda()
-        train_sampler = None
+        train_sampler = BalancedBatchSampler(
+            train_dataset
+        )
         batch_size = cfg.DATASET.IMG_NUM_PER_GPU * ngpus_per_node
     
     train_loader = torch.utils.data.DataLoader(
@@ -167,7 +170,7 @@ def main_per_worker(process_index, ngpus_per_node, args):
     )
     
         
-    criterion = nn.BCELoss()
+    criterion = nn.CrossEntropyLoss()
 
     Trainer = trackletpairConnectTrainer(
         cfg,
@@ -176,6 +179,7 @@ def main_per_worker(process_index, ngpus_per_node, args):
         lr_scheduler,
         criterion,
         output_dir,
+        'acc',
         last_iter,
         proc_rank,
         pre_ap_model=emb,

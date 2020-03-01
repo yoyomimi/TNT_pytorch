@@ -47,9 +47,9 @@ class TrackletConnectivity(nn.Module):
             nn.Dropout(p=drop_prob)
         )
 
-        self.pred_fc = nn.Linear(1024, 1)
+        self.pred_fc = nn.Linear(1024, 2) # [connected conf, not connected conf]
         
-        self.sigmoid = nn.Sigmoid()
+        self.softmax = nn.Softmax(dim=1)
         
 
     def forward(self, x):
@@ -91,7 +91,7 @@ class TrackletConnectivity(nn.Module):
         # fc_2 -> (bs, 1024)
         x = self.fc2(x)
         # fc_clssfier -> (bs, 1)
-        out = self.sigmoid(self.pred_fc(x))
+        out = self.softmax(self.pred_fc(x))
 
         return out
 

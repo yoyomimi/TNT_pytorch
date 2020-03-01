@@ -181,7 +181,7 @@ class TrackletpairDataset(Dataset):
 
         tracklet_mask_1 = torch.from_numpy(np.array(tracklet_mask_1).astype(np.float32))
         tracklet_mask_2 = torch.from_numpy(np.array(tracklet_mask_2).astype(np.float32))
-        connectivity = torch.from_numpy(np.array(int(connectivity)).astype(np.float32)).reshape(-1, 1)
+        connectivity = torch.from_numpy(np.array(int(connectivity))).type(torch.LongTensor)
         
         return img_1, img_2, loc_mat, tracklet_mask_1, tracklet_mask_2, real_window_len, connectivity
 
@@ -194,5 +194,5 @@ if __name__ == "__main__":
     transform = FacenetTransform(size=[182, 182])
 
     dataset = TrackletpairDataset('data/crop_data', transform=transform, is_train=True)
-    img_1, img_2, loc_mat, tracklet_mask_1, tracklet_mask_2 = dataset.__getitem__(9000)
+    img_1, img_2, loc_mat, tracklet_mask_1, tracklet_mask_2, real_window_len, connectivity = dataset.__getitem__(9000)
     
