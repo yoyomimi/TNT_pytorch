@@ -17,6 +17,7 @@ from configs import cfg
 from configs import update_config
 from utils.utils import get_model
 from utils.utils import load_eval_model
+from utils.utils import write_dict_to_json
 
 from datasets.transform import FacenetInferenceTransform
 from datasets.transform import PredictionTransform
@@ -62,7 +63,7 @@ if __name__ == '__main__':
     # detector
     detector = FCOS(cfg)
     assert cfg.MODEL.DETECTION_WEIGHTS != ''
-    load_eval_model(cfg.MODEL.DETECTION.WEIGHTS, detector)
+    load_eval_model(cfg.MODEL.DETECTION_WEIGHTS, detector)
     detector.cuda().eval()
 
     # appearance emb
@@ -118,7 +119,15 @@ if __name__ == '__main__':
     assert cfg.MODEL.RESUME_PATH != ''
     load_eval_model(cfg.MODEL.RESUME_PATH, tnt_model)
     tnt_model.cuda().eval()
-    coarse_track_connect = init_clustering(tnt_model, coarse_track_dict)
+    cluster_dict, cluster_cost_dict, tracklet_time_range, coarse_tracklet_connects, time_cluster_dict, track_cluster_t_dict, tracklet_comb_cost_dict = init_clustering(tnt_model, coarse_track_dict)
+    
+    # prepare the dict to query cost between tracklets neighbor in temporal dim
+    write_dict_to_json(tracklet_comb_cost_dict, 'data/tracklet_comb_cost.json')
+    
+    # graph algorithm adjusts the cluster
+    
+
+
     
     
 

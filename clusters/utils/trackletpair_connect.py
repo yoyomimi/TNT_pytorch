@@ -10,12 +10,13 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 import torch
 
 
 
-def pred_connect_with_fusion(model, coarse_track_dict, tracklet_pair, emb_size, window_len=64, max_bs=32):
+def pred_connect_with_fusion(model, coarse_track_dict, tracklet_pair, emb_size, window_len=64, max_bs=64):
     """pred tracklet pair connectivity.
     Args:
         coarse_track_dict:{
@@ -25,9 +26,14 @@ def pred_connect_with_fusion(model, coarse_track_dict, tracklet_pair, emb_size, 
 
     Return:
         track_set: np.array((pair_num, 4)). [track_id_1, track_id_2, connectivity, cost]
+        tracklet_cost_dict: <dict> {
+            track_id_1:{
+                track_id_2: <float> cost
+            }
+        }
     """
     track_set = []
-    for i in range(int(len(tracklet_pair) / max_bs) + 1):
+    for i in tqdm(range(int(len(tracklet_pair) / max_bs) + 1)):
         if i == int(len(tracklet_pair) / max_bs):
             bs = len(tracklet_pair) % max_bs
         else:
@@ -71,8 +77,18 @@ def pred_connect_with_fusion(model, coarse_track_dict, tracklet_pair, emb_size, 
         track_set_bs[:, 3] = (cls_scores[:, 1] - cls_scores[:, 0]).squeeze(-1).numpy() # (bs, 1), cost is min when pos conf >> neg conf
         track_set.append(track_set_bs)
         # delete if not debug
-        break
 
     track_set = np.vstack(track_set) # (pair_num, 3)
+    
+    tracklet_cost_dict = {}
+    for i in range(len(track_set)):
+        track_id_1 = int(track_set[i][0])
+        track_id_2 = int(track_set[i][1])
+        cost = track_set[i][3]
+        if track_id_1 not in tracklet_cost_dict.keys():
+            tracklet_cost_dict[track_id_1] = {}
+            if track_id_2 not in tracklet_cost_dict[track_id_1].keys():
+                tracklet_cost_dict[track_id_1][track_id_2] = 0.
+        tracklet_cost_dict[track_id_1][track_id_2] = cost
 
-    return track_set
+    return track_set, tracklet_cost_dict
