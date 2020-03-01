@@ -96,7 +96,7 @@ def init_clustering(model, coarse_track_dict, remove_set=[], time_dist_tresh=11,
 
             tracklet_cost_dict: <dict> {
                 track_id_1:{
-                    track_id_2: <float> cost
+                    track_id_2: [<int> connectivity, <float> cost]
             }
         }
     """

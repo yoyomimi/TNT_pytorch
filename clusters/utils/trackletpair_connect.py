@@ -28,7 +28,7 @@ def pred_connect_with_fusion(model, coarse_track_dict, tracklet_pair, emb_size, 
         track_set: np.array((pair_num, 4)). [track_id_1, track_id_2, connectivity, cost]
         tracklet_cost_dict: <dict> {
             track_id_1:{
-                track_id_2: <float> cost
+                track_id_2: [<int> connectivity, <float> cost]
             }
         }
     """
@@ -84,11 +84,12 @@ def pred_connect_with_fusion(model, coarse_track_dict, tracklet_pair, emb_size, 
     for i in range(len(track_set)):
         track_id_1 = int(track_set[i][0])
         track_id_2 = int(track_set[i][1])
+        connectivity = int(track_set[i][2])
         cost = track_set[i][3]
         if track_id_1 not in tracklet_cost_dict.keys():
             tracklet_cost_dict[track_id_1] = {}
             if track_id_2 not in tracklet_cost_dict[track_id_1].keys():
                 tracklet_cost_dict[track_id_1][track_id_2] = 0.
-        tracklet_cost_dict[track_id_1][track_id_2] = cost
+        tracklet_cost_dict[track_id_1][track_id_2] = [connectivity, cost]
 
     return track_set, tracklet_cost_dict
