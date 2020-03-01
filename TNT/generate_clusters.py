@@ -15,6 +15,7 @@ import torch
 import _init_paths
 from configs import cfg
 from configs import update_config
+from utils.utils import get_model
 from utils.utils import load_eval_model
 
 from datasets.transform import FacenetInferenceTransform
@@ -29,7 +30,9 @@ from detection.utils.metrics import run_fcos_det_example
 from tracklets.utils.utils import get_embeddings
 from tracklets.utils.utils import get_tracklet_pair_input_features
 
+from clusters.init_cluster import init_clustering
 from TNT.utils.merge_det import merge_det
+
 
 # not support multi processing for now
 
@@ -58,8 +61,8 @@ if __name__ == '__main__':
 
     # detector
     detector = FCOS(cfg)
-    assert cfg.MODEL.RESUME_PATH != ''
-    load_eval_model(cfg.MODEL.RESUME_PATH, detector)
+    assert cfg.MODEL.DETECTION_WEIGHTS != ''
+    load_eval_model(cfg.MODEL.DETECTION.WEIGHTS, detector)
     detector.cuda().eval()
 
     # appearance emb
@@ -111,6 +114,11 @@ if __name__ == '__main__':
     coarse_track_dict = merge_det(det_result)
 
     # init cluster
+    tnt_model = get_model(cfg, cfg.MODEL.FILE, cfg.MODEL.NAME)
+    assert cfg.MODEL.RESUME_PATH != ''
+    load_eval_model(cfg.MODEL.RESUME_PATH, tnt_model)
+    tnt_model.cuda().eval()
+    coarse_track_connect = init_clustering(tnt_model, coarse_track_dict)
     
     
 

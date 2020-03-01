@@ -8,7 +8,6 @@ import pandas as pd
 
 import torch
 
-
 def get_embeddings(model, frame_feat, max_emb_bs=16):
     """use appearance inference model to get embeddings from frames in fram_list.
        Args:

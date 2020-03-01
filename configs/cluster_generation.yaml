@@ -16,6 +16,8 @@ DATASET:
 TRACKLET:
   WINDOW_lEN: 64
 MODEL:
+  FILE: tracklet_connectivity
+  NAME: TrackletConnectivity
   CONNECTIVITY:
     KERNEL_SIZE: [3, 5, 9, 13]
     FEAT_CHANNELS: [16, 64, 128]
@@ -24,6 +26,7 @@ MODEL:
     EMB_SIZE: 512
     WEIGHTS: '/mnt/cephfs_new_wj/cv/chenmingfei.lasia/TNT_pytorch/work_dirs/facenet_triplet_appearance/2020-02-24-11-40/InceptionResnetV1_epoch012_iter001500_checkpoint.pth'
   RESUME_PATH: ''
+  DETECTION_WEIGHTS: '/mnt/cephfs_new_wj/cv/chenmingfei.lasia/TNT_pytorch/work_dirs/fcos_detector/2020-02-21-22-54/FCOS_epoch222_iter002000_checkpoint.pth'
   BACKBONE:
     PRETRAINED: True
     CONV_BODY: 'R-50-FPN-RETINANET'

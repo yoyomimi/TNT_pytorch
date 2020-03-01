@@ -4,20 +4,21 @@
 # Created On: 2020-2-29
 # ------------------------------------------------------------------------------
 # delete if not debug
-import os
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import _init_paths
+from utils.utils import load_eval_model
+from tracklets.fushion_models.tracklet_connectivity import TrackletConnectivity
 
 import numpy as np
 
+from clusters.utils.trackletpair_connect import pred_connect_with_fusion
 from clusters.utils.tracklet_connect import define_coarse_tracklet_connections
-from tracklets.utils.trackletpair_connect import pred_connect_with_fusion
 
 
-def update_neighbor_use_net(coarse_track_dict, coarse_tracklet_connects, emb_size, slide_window_len=60):
+
+def update_neighbor_use_net(model, coarse_track_dict, tracklet_pair, coarse_tracklet_connects, emb_size, slide_window_len=64):
     track_set = []
-    # get track set using net: (coarse_tracklet_id1, coarse_tracklet_id2, pred_connectivity), id1 is in the front
-    track_set = pred_connect_with_fusion(coarse_track_dict, slide_window_len) #implement in tracklet.utils, sample, pred and save
+    # get track set using net: np.array (coarse_tracklet_id1, coarse_tracklet_id2, pred_connectivity, pred_cost), id1 is in the front
+    track_set = pred_connect_with_fusion(model, coarse_track_dict, tracklet_pair, emb_size, slide_window_len) #implement in tracklet.utils, sample, pred and save
     
     for n in range(len(track_set)):
         track_id_1 = int(track_set[n, 0])
@@ -31,11 +32,11 @@ def update_neighbor_use_net(coarse_track_dict, coarse_tracklet_connects, emb_siz
             if track_id_1 not in coarse_tracklet_connects[track_id_2]['neighbor']:
                 coarse_tracklet_connects[track_id_2]['neighbor'].append(track_id_1)
                 coarse_tracklet_connects[track_id_1]['neighbor'].append(track_id_2)
-            if track_id_1 not in coarse_tracklet_connects[track_id_2]['conflict']:
+            if track_id_1 in coarse_tracklet_connects[track_id_2]['conflict']:
                 coarse_tracklet_connects[track_id_2]['conflict'].remove(track_id_1)
                 coarse_tracklet_connects[track_id_1]['conflict'].remove(track_id_2)
         else: # should be conflict (neighbor in time, but not neighbor in tracklets)
-            if track_id_1 not in coarse_tracklet_connects[track_id_2]['neighbor']:
+            if track_id_1 in coarse_tracklet_connects[track_id_2]['neighbor']:
                 coarse_tracklet_connects[track_id_2]['neighbor'].remove(track_id_1)
                 coarse_tracklet_connects[track_id_1]['neighbor'].remove(track_id_2)
             if track_id_1 not in coarse_tracklet_connects[track_id_2]['conflict']:
@@ -44,8 +45,8 @@ def update_neighbor_use_net(coarse_track_dict, coarse_tracklet_connects, emb_siz
 
 
 # add in config: time_dist_tresh, time_margin, time_cluster_dist, track_overlap_thresh, search_radius, clip_len, slide_window_len
-def init_clustering(coarse_track_dict, remove_set=[], time_dist_tresh=11, time_margin=3, time_cluster_dist=24,
-                    track_overlap_thresh=0.1, search_radius=1, clip_len=6, slide_window_len=60):
+def init_clustering(model, coarse_track_dict, remove_set=[], time_dist_tresh=11, time_margin=3, time_cluster_dist=24,
+                    track_overlap_thresh=0.1, search_radius=1, clip_len=6, slide_window_len=64):
     """init time clusters and track clusters based on coarse_track_dict.
        
        Args: 
@@ -96,22 +97,48 @@ def init_clustering(coarse_track_dict, remove_set=[], time_dist_tresh=11, time_m
                 time_cluster_dict[i].append(track_id)
     
     # define connectivity among coarse tracklets
-    coarse_tracklet_connects = define_coarse_tracklet_connections(coarse_track_dict, emb_size,
-        track_overlap_thresh, search_radius, clip_len)
-
-    coarse_tracklet_connects = update_neighbor_use_net(coarse_track_dict, coarse_tracklet_connects, emb_size, slide_window_len)
-
-    # init track cluster
-    track_cluster_dict = {}
+    coarse_tracklet_connects, tracklet_pair = define_coarse_tracklet_connections(coarse_track_dict, emb_size,
+        track_overlap_thresh, search_radius, clip_len, slide_window_len)
+    
+    coarse_tracklet_connects = update_neighbor_use_net(model, coarse_track_dict, tracklet_pair, 
+        coarse_tracklet_connects, emb_size, slide_window_len)
+    return coarse_tracklet_connects
+    # # init track cluster
+    # track_cluster_dict = {}
 
     
-    return time_cluster_dict, track_cluster_t_dict, track_cluster_dict
+    # return time_cluster_dict, track_cluster_t_dict, track_cluster_dict
 
 
 
 if __name__ == "__main__":
+    import argparse
     import json
     import numpy as np
+
+    from configs import cfg
+    from configs import update_config
+
+    parser = argparse.ArgumentParser(description="run clusters generation")
+    parser.add_argument(
+        '--cfg',
+        dest='yaml_file',
+        default='',
+        help='experiment configure file name, e.g. configs/fcos_detector.yaml',
+        type=str
+    )
+    parser.add_argument(
+        'opts',
+        help="Modify config options using the command-line",
+        default=None,
+        nargs=argparse.REMAINDER
+    )
+    args = parser.parse_args()
+    update_config(cfg, args)
+
+    tnt_model = TrackletConnectivity(cfg)
+    load_eval_model('work_dirs/trackletpair_connectivity/2020-03-01-12-13/TrackletConnectivity_epoch000_iter000010_checkpoint.pth', tnt_model)
+    tnt_model.cuda().eval()
 
     # from utils.utils import write_dict_to_json
     
@@ -122,5 +149,6 @@ if __name__ == "__main__":
         temp_dict = json.load(f)  
     for track_id in temp_dict.keys():
         coarse_track_dict[int(track_id)] = np.array(temp_dict[track_id], dtype=np.float32)
-
-    time_cluster_dict, track_cluster_t_dict, track_cluster_dict = init_clustering(coarse_track_dict)
+    
+    coarse_tracklet_connects = init_clustering(tnt_model, coarse_track_dict)
+    

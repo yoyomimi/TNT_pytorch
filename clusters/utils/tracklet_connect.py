@@ -16,9 +16,34 @@ def get_coarse_tarcklet_loc(coarse_track_dict, track_id, cand_t, emb_size):
     return center_x, center_y, w, h
 
 
+def get_trackletpair_t_range(t_min_1, t_max_1, t_min_2, t_max_2, window_len):
+    """get tracklet pair time range within a window_len.
+       default: t_min_1 <= t_max_1 <= t_min_2 <= t_max_2.
+    Return:
+        t_start_1, t_end_1, t_start_2, t_end_2
+    """
+    assert t_min_1 <= t_max_1 <= t_min_2 <= t_max_2
+    if t_max_2 - t_min_1 + 1 <= window_len:
+        # window covers both of the tracklets
+        return t_min_1, t_max_1, t_min_2, t_max_2
+    # window can't cover both of the tracklets
+    mid_gap_t = int((t_max_1 + t_min_2) / 2) # the mid t point of the gap between two tracklets
+    if mid_gap_t - t_min_1 + 1 >= 0.5 * window_len and t_max_2 - mid_gap_t + 1 <= 0.5 * window_len:
+        # crop tracklet_1
+        return t_max_2-window_len+1, t_max_1, t_min_2, t_max_2
+    elif mid_gap_t - t_min_1 + 1 <= 0.5 * window_len and t_max_2 - mid_gap_t + 1 >= 0.5 * window_len:
+        # crop tracklet_2
+        return t_min_1, t_max_1, t_min_2, t_min_1+window_len-1
+    else:
+        # crop both tracklet_1 and tracklet_2
+        t_start_1 = mid_gap_t - int(0.5 * window_len) + 1
+        return t_start_1, t_max_1, t_min_2, t_start_1+window_len-1
+    
+
 def define_coarse_tracklet_connections(coarse_track_dict, emb_size, track_overlap_thresh=0.1, search_radius=1,
-                                       time_dist_tresh=11, clip_len=6):
-    """Distinguish the neighbor and the conflict tracklets for all coarse tracklets.
+                                       time_dist_tresh=11, clip_len=6, window_len=64):
+    """distinguish the neighbor and the conflict tracklets for all coarse tracklets;
+       generate tracklet pair using sliding window (overlap <= 0).
        
        Args: 
            coarse_track_dict <dict> {
@@ -29,6 +54,7 @@ def define_coarse_tracklet_connections(coarse_track_dict, emb_size, track_overla
            search_radius: .
            time_dist_tresh: max gap between two coarse tracklets attribute to the same tracklet.
            clip_len: clip length of the end or start of one coarse tracklet to match the pred_loc.
+           window_len: .
 
        Return: 
             coarse_tracklet_connects <dict>{
@@ -36,10 +62,12 @@ def define_coarse_tracklet_connections(coarse_track_dict, emb_size, track_overla
                     'conflict': <list> track_id list of conflict coarse tracklets,
                     'neighbor': <list> track_id list of neighbor coarse tracklets,
                 }
-            }
+            },
+            tracklet_pair: <np.array((pair_num, 6)), [track_id_1, t_start_1, t_end_1, track_id_2,  t_start_2, t_end_2]
     """
     track_num = len(coarse_track_dict.keys())
-    coarse_tracklet_connects = {}    
+    coarse_tracklet_connects = {}   
+    tracklet_pair = [] 
     for track_id in coarse_track_dict.keys():
         coarse_tracklet_connects[track_id] = dict(
             conflict=[],
@@ -125,6 +153,14 @@ def define_coarse_tracklet_connections(coarse_track_dict, emb_size, track_overla
                         track_t2 = track_t2[-clip_len:]
                         center_x_2 = center_x_2[-clip_len:]
                         center_y_2 = center_y_2[-clip_len:]
+                    # generate tracklet_pair
+                    pair = np.zeros((6)) - 1
+                    pair[0] = track_id_2
+                    pair[1] = track_id_1
+                    t_range = np.array(get_trackletpair_t_range(t_min_2, t_max_2, t_min_1, t_max_1, window_len))
+                    pair[2:] = t_range
+                    
+                    tracklet_pair.append(pair)
                 elif t_max_1 <= t_min_2:
                     t1 = int(t_max_1)
                     t2 = int(t_min_2)
@@ -145,6 +181,12 @@ def define_coarse_tracklet_connections(coarse_track_dict, emb_size, track_overla
                         track_t2 = track_t2[:clip_len]
                         center_x_2 = center_x_2[:clip_len]
                         center_y_2 = center_y_2[:clip_len]
+                    pair = np.zeros((6)) - 1
+                    pair[0] = track_id_1
+                    pair[1] = track_id_2
+                    t_range = np.array(get_trackletpair_t_range(t_min_1, t_max_1, t_min_2, t_max_2, window_len))
+                    pair[2:] = t_range
+                    tracklet_pair.append(pair)
                 
                 pred_center_x_t1 = linear_pred_v2(track_t1, center_x_1, np.array([t2]))[0]
                 pred_center_y_t1 = linear_pred_v2(track_t1, center_y_1, np.array([t2]))[0]
@@ -166,4 +208,6 @@ def define_coarse_tracklet_connections(coarse_track_dict, emb_size, track_overla
                     coarse_tracklet_connects[track_id_1]['neighbor'].append(track_id_2)
                     coarse_tracklet_connects[track_id_2]['neighbor'].append(track_id_1)
 
-    return coarse_tracklet_connects
+    tracklet_pair = np.vstack(tracklet_pair).astype(np.int64)
+
+    return coarse_tracklet_connects, tracklet_pair
