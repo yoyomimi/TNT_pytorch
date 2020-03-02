@@ -15,9 +15,8 @@ from tqdm import tqdm
 import torch
 
 
-
 def pred_connect_with_fusion(model, coarse_track_dict, tracklet_pair, emb_size, window_len=64, max_bs=64):
-    """pred tracklet pair connectivity.
+    """pred coarse neighbor tracklet pair connectivity.
     Args:
         coarse_track_dict:{
             'track_id': (frame_num, emb_size+4+1), for one frame_num in one track_id [img_emb(512) x y w h label], np.array
@@ -25,13 +24,13 @@ def pred_connect_with_fusion(model, coarse_track_dict, tracklet_pair, emb_size, 
         tracklet_pair: <np.array((pair_num, 6)), [track_id_1, t_start_1, t_end_1, track_id_2,  t_start_2, t_end_2].
 
     Return:
-        track_set: np.array((pair_num, 4)). [track_id_1, track_id_2, connectivity, cost]
         tracklet_cost_dict: <dict> {
             track_id_1:{
                 track_id_2: [<int> connectivity, <float> cost]
             }
         }
     """
+    print('tracklet_pair num: ', len(tracklet_pair))
     track_set = []
     for i in tqdm(range(int(len(tracklet_pair) / max_bs) + 1)):
         if i == int(len(tracklet_pair) / max_bs):
@@ -44,7 +43,7 @@ def pred_connect_with_fusion(model, coarse_track_dict, tracklet_pair, emb_size, 
         det_mask_2 = tracklet_pair_features_input[:, :, :, 2]
         track_set_bs = np.zeros((bs, 4))  
         for j in range(bs):
-            idx = 8 * i + j
+            idx = max_bs * i + j
             track_id_1 = tracklet_pair[idx, 0]
             track_id_2 = tracklet_pair[idx, 1]
             t_min_1 = tracklet_pair[idx, 2]
@@ -74,7 +73,7 @@ def pred_connect_with_fusion(model, coarse_track_dict, tracklet_pair, emb_size, 
         cls_scores = model(tracklet_pair_features_input).data.cpu() # (bs, 2)
         track_set_bs[:, 2] = cls_scores.max(1, keepdim=True)[1].squeeze(-1).numpy() # (bs, 1), 1 is connected
         # TODO is that right below?
-        track_set_bs[:, 3] = (cls_scores[:, 0] - cls_scores[:, 1]).squeeze(-1).numpy() # (bs, 1), cost is min when pos conf >> neg conf
+        track_set_bs[:, 3] = (cls_scores[:, 0] - cls_scores[:, 1]).squeeze(-1).numpy() # (bs, 1), cost is max when neighbor pair apparently not connected
         track_set.append(track_set_bs)
         # delete if not debug
 
@@ -88,8 +87,8 @@ def pred_connect_with_fusion(model, coarse_track_dict, tracklet_pair, emb_size, 
         cost = track_set[i][3]
         if track_id_1 not in tracklet_cost_dict.keys():
             tracklet_cost_dict[track_id_1] = {}
-            if track_id_2 not in tracklet_cost_dict[track_id_1].keys():
-                tracklet_cost_dict[track_id_1][track_id_2] = 0.
+        if track_id_2 not in tracklet_cost_dict[track_id_1].keys():
+            tracklet_cost_dict[track_id_1][track_id_2] = 0.
         tracklet_cost_dict[track_id_1][track_id_2] = [connectivity, cost]
 
-    return track_set, tracklet_cost_dict
+    return tracklet_cost_dict

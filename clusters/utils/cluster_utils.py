@@ -1,8 +1,3 @@
-
-
-
-
-
 # generate cluster dict using tracklet connect dict
 def transfer_connect_to_cluster_dict(tracklet_connects, track_dict):
     """transfer connect graph of tracklets to cluster dict.

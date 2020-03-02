@@ -50,7 +50,10 @@ class TrackletConnectivity(nn.Module):
         self.pred_fc = nn.Linear(1024, 2) # [connected conf, not connected conf]
         
         self.softmax = nn.Softmax(dim=1)
-        
+
+        # TODO
+        # self.init_weights()
+
 
     def forward(self, x):
         """

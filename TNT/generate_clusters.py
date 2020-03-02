@@ -32,6 +32,7 @@ from tracklets.utils.utils import get_embeddings
 from tracklets.utils.utils import get_tracklet_pair_input_features
 
 from clusters.init_cluster import init_clustering
+from clusters.optimal_cluster import get_optimal_cluster
 from TNT.utils.merge_det import merge_det
 
 
@@ -116,15 +117,25 @@ if __name__ == '__main__':
 
     # init cluster
     tnt_model = get_model(cfg, cfg.MODEL.FILE, cfg.MODEL.NAME)
-    assert cfg.MODEL.RESUME_PATH != ''
-    load_eval_model(cfg.MODEL.RESUME_PATH, tnt_model)
+    if cfg.MODEL.RESUME_PATH != '':
+        load_eval_model(cfg.MODEL.RESUME_PATH, tnt_model)
     tnt_model.cuda().eval()
-    cluster_dict, cluster_cost_dict, tracklet_time_range, coarse_tracklet_connects, time_cluster_dict, track_cluster_t_dict, tracklet_comb_cost_dict = init_clustering(tnt_model, coarse_track_dict)
+    cluster_info = init_clustering(tnt_model, coarse_track_dict)
+  
+    cluster_dict, cluster_cost_dict = cluster_info[:2] # initial track cluster, all vertices
+    coarse_tracklet_connects = cluster_info[2] # initial edges and time range for each
+    time_cluster_dict, track_cluster_t_dict = cluster_info[3:5] # initial time cluster
+    tracklet_comb_cost_dict =  cluster_info[-1] # cost for graph edges among neighbor vertices
     
     # prepare the dict to query cost between tracklets neighbor in temporal dim
     write_dict_to_json(tracklet_comb_cost_dict, 'data/tracklet_comb_cost.json')
+    # write_dict_to_json(cluster_dict, 'data/cluster_dict.json')
+    # write_dict_to_json(coarse_tracklet_connects, 'data/coarse_tracklet_connects.json')
+    # write_dict_to_json(cluster_cost_dict, 'data/cluster_cost_dict.json')
     
     # graph algorithm adjusts the cluster
+    cluster_dict = get_optimal_cluster(cluster_dict, coarse_tracklet_connects, tracklet_comb_cost_dict)
+    
     
 
 

@@ -9,26 +9,64 @@ from utils.utils import load_eval_model
 from tracklets.fushion_models.tracklet_connectivity import TrackletConnectivity
 
 import numpy as np
+import pickle
 
 from clusters.utils.trackletpair_connect import pred_connect_with_fusion
 from clusters.utils.tracklet_connect import define_coarse_tracklet_connections
+from clusters.utils.tracklet_connect import get_trackletpair_t_range
 
 
 
-def update_neighbor_use_net(model, coarse_track_dict, tracklet_pair, coarse_tracklet_connects, emb_size, slide_window_len=64):
-   # get track set using net: np.array (coarse_tracklet_id1, coarse_tracklet_id2, pred_connectivity, pred_cost), id1 is in the front
-    track_set, tracklet_cost_dict = pred_connect_with_fusion(model, coarse_track_dict, tracklet_pair, emb_size, slide_window_len) #implement in tracklet.utils, sample, pred and save
-    
+def update_neighbor(coarse_track_dict, track_set, tracklet_pair, coarse_tracklet_connects, emb_size, slide_window_len=64): 
+    """using pretrained results track_set to update the connect and trackletpair.
+    Args:
+        track_set: <list>, [track_id_1, track_id_2, connectivity]
+        tracklet_pair: <list>, [track_id_1, track_id_2, t_min_1, t_max_1, t_min_2, t_max_2], removed the overlap part,
+            crop the part out of the sliding window.
+    """  
     for n in range(len(track_set)):
         track_id_1 = int(track_set[n, 0])
         track_id_2 = int(track_set[n, 1])
         if track_set[n, 2] == 1: # connected tracklets, should be neighbors
+            min_t_id_1 = np.min(np.where(coarse_track_dict[track_id_1][:, emb_size]!=-1)[0])
             max_t_id_1 = np.max(np.where(coarse_track_dict[track_id_1][:, emb_size]!=-1)[0])
             min_t_id_2 = np.min(np.where(coarse_track_dict[track_id_2][:, emb_size]!=-1)[0])
+            max_t_id_2 = np.max(np.where(coarse_track_dict[track_id_2][:, emb_size]!=-1)[0])
             # TODO what about connective but much overlap? Will net be more reliable?
             if abs(min_t_id_2 - max_t_id_1) > slide_window_len: # not in a sliding window 
                 continue
             if track_id_1 not in coarse_tracklet_connects[track_id_2]['neighbor']:
+                # generate tracklet_pair
+                if min_t_id_1 <= min_t_id_2:
+                    # track_id_1, track_id_2, 
+                    if max_t_id_1 > min_t_id_2: # crop the overlap
+                        new_t_max_1 = min_t_id_2
+                        new_t_min_2 = max_t_id_1
+                    else:
+                        new_t_max_1 = max_t_id_1
+                        new_t_min_2 = min_t_id_2
+                    # generate tracklet_pair
+                    pair = np.zeros((6)) - 1
+                    pair[0] = track_id_1
+                    pair[1] = track_id_2
+                    t_range = np.array(get_trackletpair_t_range(min_t_id_1, new_t_max_1, new_t_min_2, max_t_id_2, slide_window_len))
+                    pair[2:] = t_range
+                    tracklet_pair = np.vstack([tracklet_pair, pair]).astype(np.int64)
+                elif min_t_id_1 > min_t_id_2:
+                    # track_id_2, track_id_1, crop the overlap
+                    if max_t_id_2 > min_t_id_1:
+                        new_t_max_2 = min_t_id_1
+                        new_t_min_1 = max_t_id_2
+                    else:
+                        new_t_max_2 = max_t_id_2
+                        new_t_min_1 = min_t_id_1
+                    # generate tracklet_pair
+                    pair = np.zeros((6)) - 1
+                    pair[0] = track_id_2
+                    pair[1] = track_id_1
+                    t_range = np.array(get_trackletpair_t_range(min_t_id_2, new_t_max_2, new_t_min_1, max_t_id_1, slide_window_len))
+                    pair[2:] = t_range
+                    tracklet_pair = np.vstack([tracklet_pair, pair]).astype(np.int64)
                 coarse_tracklet_connects[track_id_2]['neighbor'].append(track_id_1)
                 coarse_tracklet_connects[track_id_1]['neighbor'].append(track_id_2)
             if track_id_1 in coarse_tracklet_connects[track_id_2]['conflict']:
@@ -36,17 +74,22 @@ def update_neighbor_use_net(model, coarse_track_dict, tracklet_pair, coarse_trac
                 coarse_tracklet_connects[track_id_1]['conflict'].remove(track_id_2)
         else: # should be conflict (neighbor in time, but not neighbor in tracklets)
             if track_id_1 in coarse_tracklet_connects[track_id_2]['neighbor']:
+                index = np.where(np.logical_and(tracklet_pair[:, 0]==track_id_1, tracklet_pair[:, 1]==track_id_2))[0]
+                index = np.hstack([index, np.where(np.logical_and(tracklet_pair[:, 0]==track_id_2, tracklet_pair[:, 1]==track_id_1))[0]])
+                # delete conflict pair
+                if len(index) > 0:
+                    tracklet_pair = np.delete(tracklet_pair, index, 0)
                 coarse_tracklet_connects[track_id_2]['neighbor'].remove(track_id_1)
                 coarse_tracklet_connects[track_id_1]['neighbor'].remove(track_id_2)
             if track_id_1 not in coarse_tracklet_connects[track_id_2]['conflict']:
                 coarse_tracklet_connects[track_id_2]['conflict'].append(track_id_1)
                 coarse_tracklet_connects[track_id_1]['conflict'].append(track_id_2)
-    return coarse_tracklet_connects, tracklet_cost_dict
+    return coarse_tracklet_connects, tracklet_pair
 
 # add in config: time_dist_tresh, time_margin, time_cluster_dist, track_overlap_thresh, \
-# search_radius, clip_len, slide_window_len, cost_bias
+# search_radius, clip_len, slide_window_len, cost_bias, refine_track_set
 def init_clustering(model, coarse_track_dict, remove_set=[], time_dist_tresh=11, time_margin=3, time_cluster_dist=24,
-                    track_overlap_thresh=0.1, search_radius=1, clip_len=6, slide_window_len=64, cost_bias=0):
+                    track_overlap_thresh=0.45, search_radius=3, clip_len=6, slide_window_len=64, cost_bias=0, refine_track_set=None):
     """init time clusters and track clusters based on coarse_track_dict.
        
        Args: 
@@ -62,6 +105,7 @@ def init_clustering(model, coarse_track_dict, remove_set=[], time_dist_tresh=11,
             clip_len: .
             slide_window_len: .
             cost_bias: cost when one tracklet as a cluster.
+            refine_track_set: the pred track using pretrained method.
 
        Return: 
             cluster_dict <dict> {
@@ -71,8 +115,6 @@ def init_clustering(model, coarse_track_dict, remove_set=[], time_dist_tresh=11,
             track_cluster_t_dict = <dict> {
                 track_id <int>: <list> list of time_cluster_ids for this track
             },
-
-            tracklet_time_range: np.zeros((track_num, 2)),
 
             track_cluster_dict <dict> {
                 cluster_id <int>: <list> list of track_ids in this cluster
@@ -97,14 +139,13 @@ def init_clustering(model, coarse_track_dict, remove_set=[], time_dist_tresh=11,
             tracklet_cost_dict: <dict> {
                 track_id_1:{
                     track_id_2: [<int> connectivity, <float> cost]
+                }
             }
-        }
     """
     frame_num, feat_size = coarse_track_dict[0].shape
     emb_size = feat_size - 4 - 1
 
     track_num = len(coarse_track_dict)
-    tracklet_time_range = np.zeros((track_num, 2))
     # init time cluster and track_t_cluster
     time_cluster_dict = {}
     track_cluster_t_dict = {}
@@ -116,8 +157,6 @@ def init_clustering(model, coarse_track_dict, remove_set=[], time_dist_tresh=11,
         idx = np.where(track[:, emb_size]!=-1)[0]
         min_t_idx = np.min(idx)
         max_t_idx = np.max(idx)
-        tracklet_time_range[track_id][0] = min_t_idx
-        tracklet_time_range[track_id][1] = max_t_idx
         if track_id in remove_set:
             track_cluster_t_dict[track_id] = [-1]
         else:
@@ -136,18 +175,22 @@ def init_clustering(model, coarse_track_dict, remove_set=[], time_dist_tresh=11,
         cluster_dict[i] = [int(track_id)]
         cluster_cost_dict[i] = cost_bias
         track_cluster_index[int(track_id)] = [i]
-
+    
     # define connectivity among coarse tracklets
     coarse_tracklet_connects, tracklet_pair = define_coarse_tracklet_connections(coarse_track_dict, emb_size,
         track_overlap_thresh, search_radius, clip_len, slide_window_len)
     
-    coarse_tracklet_connects, tracklet_cost_dict = update_neighbor_use_net(model, coarse_track_dict, tracklet_pair, 
-        coarse_tracklet_connects, emb_size, slide_window_len)
+    if refine_track_set:
+        # using pretrained results track_set to update the connect and trackletpair
+        track_set = pickle.load(open(refine_track_set,'rb'))
+        coarse_tracklet_connects, tracklet_pair = update_neighbor(coarse_track_dict, track_set, tracklet_pair, coarse_tracklet_connects, 
+            emb_size, slide_window_len)
 
-    return cluster_dict, cluster_cost_dict, tracklet_time_range, coarse_tracklet_connects, time_cluster_dict, track_cluster_t_dict, tracklet_cost_dict
+    # get tracklet connect cost(<0 if connected) dicr
+    tracklet_cost_dict = pred_connect_with_fusion(model, coarse_track_dict, tracklet_pair, emb_size, slide_window_len)
+
+    return cluster_dict, cluster_cost_dict, coarse_tracklet_connects, time_cluster_dict, track_cluster_t_dict, tracklet_cost_dict
     
-
-
 
 if __name__ == "__main__":
     import argparse
@@ -188,5 +231,5 @@ if __name__ == "__main__":
     for track_id in temp_dict.keys():
         coarse_track_dict[int(track_id)] = np.array(temp_dict[track_id], dtype=np.float32)
     
-    cluster_dict, cluster_cost_dict, tracklet_time_range, coarse_tracklet_connects, time_cluster_dict, track_cluster_t_dict, tracklet_cost_dict = init_clustering(tnt_model, coarse_track_dict)
+    cluster_dict, cluster_cost_dict, coarse_tracklet_connects, time_cluster_dict, track_cluster_t_dict, tracklet_cost_dict = init_clustering(tnt_model, coarse_track_dict)
     
