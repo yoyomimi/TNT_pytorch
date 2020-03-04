@@ -144,7 +144,7 @@ def get_optimal_cluster(coarse_tracklet_connects, tracklet_comb_cost):
     cost = 0.0
     import time
     start = time.time()
-    get_optimal(coarse_tracklet_connects, tracklet_comb_cost, visited, parent, cost, convergence_len=10000)
+    get_optimal(coarse_tracklet_connects, tracklet_comb_cost, visited, parent, cost, convergence_len=1e7)
     print('best: ', best_cluster, min_cost)
     print('time: ', time.time()-start, 's')
     return best_cluster, min_cost
@@ -176,6 +176,7 @@ if __name__ == '__main__':
             tracklet_comb_cost[int(track_id)][int(track_id_2)] = temp_dict[track_id][track_id_2]
     
     cluster_list, min_cost = get_optimal_cluster(coarse_tracklet_connects, tracklet_comb_cost)
+
     for cluster in cluster_list:
         cluster_id = min(cluster)
         for track_id in cluster:

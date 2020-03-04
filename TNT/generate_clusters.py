@@ -137,18 +137,34 @@ if __name__ == '__main__':
             cluster_dict[cluster_id].append(track_id)
     # write_dict_to_json(cluster_dict, 'data/new_cluster_dict.json')
     
-    # generate cluster feat dict, cluster_id: np.array((frame_len, emb_size+4+1)), xmin, ymin, xmax, ymax
+    # generate cluster feat dict, cluster_id: np.array((frame_len, emb_size+4+1)), xmin, ymin, w, h
     cluster_feat_dict, cluster_frame_range = cluster_dict_processing(coarse_track_dict, tracklet_time_range, cluster_dict)
         
     # visualize based on cluster_id, locations and labels. One color for one cluster.
-    visualize_dict = {} # frame_id: {track_id: {color: , label: , loc: [xmin, ymin, xmax, ymax]}}
+    visualize_dict = {} # frame_id: {track_id: {label: , loc: [xmin, ymin, xmax, ymax]}}
+    frame_len = len(cluster_feat_dict[0])
     for frame_id in range(frame_len):
         visualize_dict[frame_id] = {}
     for cluster_id in cluster_feat_dict.keys():
-        # color
-        loc = cluster_feat[cluster_id][:, -5:-1] # (frame_len, 4)
-        label = cluster_feat[cluster_id][:, -1] # (frame_len, 1), vote for the most proper label
-        # visualize color label loc
+        loc = cluster_feat_dict[cluster_id][:, -5:-1] # (frame_len, 4)
+        # xmin, ymin, xmax, ymax
+        loc[:, 2] += loc[:, 0]
+        loc[:, 3] += loc[:, 1]
+        # the labels for one cluster have been voted to the same
+        label = cluster_feat_dict[cluster_id][:, -1] # (frame_len, 1) 
+        # visualize info with label and loc
+        min_t = int(cluster_frame_range[cluster_id][0])
+        max_t = int(cluster_frame_range[cluster_id][1])
+        for frame_id in range(min_t, max_t+1):
+             visualize_dict[frame_id][cluster_id] = dict(
+                 loc = loc[frame_id],
+                 class_id = int(label[frame_id])
+             )
+    write_dict_to_json(visualize_dict, 'data/visualize.json')
+
+
+
+
 
 
 
