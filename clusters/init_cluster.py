@@ -107,48 +107,20 @@ def init_clustering(model, coarse_track_dict, remove_set=[], time_dist_tresh=11,
             cost_bias: cost when one tracklet as a cluster.
             refine_track_set: the pred track using pretrained method.
 
-       Return: 
-            cluster_dict <dict> {
-                frame_id <int>: <list> list of track_ids at this frame
-            },
-
-            track_cluster_t_dict = <dict> {
-                track_id <int>: <list> list of time_cluster_ids for this track
-            },
-
-            track_cluster_dict <dict> {
-                cluster_id <int>: <list> list of track_ids in this cluster
-            },
-
-            coarse_tracklet_connects <dict>{
-                tracklet_id <int>:{
-                    'neighbor': <list> list of track_ids,
-                    'conflict': <list> list of track_ids
-
-                }
-            },
-
-            track_cluster_index<dict> {
-                track_id <int>:  <int> cluster_id,
-            },
-
-            cluster_cost_dict<dict> {
-                cluster_id <int>: <float> cost
-            },
-
-            tracklet_cost_dict: <dict> {
-                track_id_1:{
-                    track_id_2: [<int> connectivity, <float> cost]
-                }
-            }
     """
     frame_num, feat_size = coarse_track_dict[0].shape
     emb_size = feat_size - 4 - 1
 
     track_num = len(coarse_track_dict)
+
+    cluster_dict = {}
+    for track_id in coarse_track_dict.keys():
+        cluster_dict[int(track_id)] = [int(track_id)]
+
     # init time cluster and track_t_cluster
-    time_cluster_dict = {}
-    track_cluster_t_dict = {}
+    time_cluster_dict = {} # TODO what to do with it?
+    track_cluster_t_dict = {} # TODO what to do with it?
+    tracklet_time_range = {}
     time_cluster_num = int(np.ceil(frame_num/time_cluster_dist))
     for i in range(time_cluster_num):
         time_cluster_dict[i] = []
@@ -157,6 +129,7 @@ def init_clustering(model, coarse_track_dict, remove_set=[], time_dist_tresh=11,
         idx = np.where(track[:, emb_size]!=-1)[0]
         min_t_idx = np.min(idx)
         max_t_idx = np.max(idx)
+        tracklet_time_range[track_id] = [min_t_idx, max_t_idx]
         if track_id in remove_set:
             track_cluster_t_dict[track_id] = [-1]
         else:
@@ -166,30 +139,23 @@ def init_clustering(model, coarse_track_dict, remove_set=[], time_dist_tresh=11,
             for i in range(min_time_cluster_idx, max_time_cluster_idx+1):
                 time_cluster_dict[i].append(track_id)
     
-    # init track cluster
-    cluster_dict = {} # key-cluster_id, value-track_id_list
-    track_cluster_index = {} # key-track_id, value-cluster_id
-    cluster_cost_dict = {}
-    for i in range(len(coarse_track_dict.keys())):
-        track_id = list(coarse_track_dict.keys())[i]
-        cluster_dict[i] = [int(track_id)]
-        cluster_cost_dict[i] = cost_bias
-        track_cluster_index[int(track_id)] = [i]
-    
     # define connectivity among coarse tracklets
     coarse_tracklet_connects, tracklet_pair = define_coarse_tracklet_connections(coarse_track_dict, emb_size,
         track_overlap_thresh, search_radius, clip_len, slide_window_len)
-    
+
+
+    # get tracklet connect cost(<0 if connected) dict
+    tracklet_cost_dict, track_set = pred_connect_with_fusion(model, coarse_track_dict, tracklet_pair, emb_size, slide_window_len)
+    coarse_tracklet_connects, tracklet_pair = update_neighbor(coarse_track_dict, track_set, tracklet_pair, coarse_tracklet_connects, 
+            emb_size, slide_window_len)
+
     if refine_track_set:
         # using pretrained results track_set to update the connect and trackletpair
         track_set = pickle.load(open(refine_track_set,'rb'))
         coarse_tracklet_connects, tracklet_pair = update_neighbor(coarse_track_dict, track_set, tracklet_pair, coarse_tracklet_connects, 
             emb_size, slide_window_len)
 
-    # get tracklet connect cost(<0 if connected) dicr
-    tracklet_cost_dict = pred_connect_with_fusion(model, coarse_track_dict, tracklet_pair, emb_size, slide_window_len)
-
-    return cluster_dict, cluster_cost_dict, coarse_tracklet_connects, time_cluster_dict, track_cluster_t_dict, tracklet_cost_dict
+    return cluster_dict, tracklet_time_range, coarse_tracklet_connects, tracklet_cost_dict
     
 
 if __name__ == "__main__":

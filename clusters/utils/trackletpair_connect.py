@@ -77,7 +77,7 @@ def pred_connect_with_fusion(model, coarse_track_dict, tracklet_pair, emb_size, 
         track_set.append(track_set_bs)
         # delete if not debug
 
-    track_set = np.vstack(track_set) # (pair_num, 3)
+    track_set = np.vstack(track_set) # (pair_num, 4)
     
     tracklet_cost_dict = {}
     for i in range(len(track_set)):
@@ -91,4 +91,4 @@ def pred_connect_with_fusion(model, coarse_track_dict, tracklet_pair, emb_size, 
             tracklet_cost_dict[track_id_1][track_id_2] = 0.
         tracklet_cost_dict[track_id_1][track_id_2] = [connectivity, cost]
 
-    return tracklet_cost_dict
+    return tracklet_cost_dict, track_set

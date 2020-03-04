@@ -33,6 +33,7 @@ from tracklets.utils.utils import get_tracklet_pair_input_features
 
 from clusters.init_cluster import init_clustering
 from clusters.optimal_cluster import get_optimal_cluster
+from clusters.utils.cluster_utils import cluster_dict_processing
 from TNT.utils.merge_det import merge_det
 
 
@@ -57,6 +58,7 @@ parser.add_argument(
     nargs=argparse.REMAINDER)
 
 args = parser.parse_args()
+
 
 if __name__ == '__main__':
     update_config(cfg, args)
@@ -120,21 +122,37 @@ if __name__ == '__main__':
     if cfg.MODEL.RESUME_PATH != '':
         load_eval_model(cfg.MODEL.RESUME_PATH, tnt_model)
     tnt_model.cuda().eval()
-    cluster_info = init_clustering(tnt_model, coarse_track_dict)
-  
-    cluster_dict, cluster_cost_dict = cluster_info[:2] # initial track cluster, all vertices
-    coarse_tracklet_connects = cluster_info[2] # initial edges and time range for each
-    time_cluster_dict, track_cluster_t_dict = cluster_info[3:5] # initial time cluster
-    tracklet_comb_cost_dict =  cluster_info[-1] # cost for graph edges among neighbor vertices
-    
-    # prepare the dict to query cost between tracklets neighbor in temporal dim
-    write_dict_to_json(tracklet_comb_cost_dict, 'data/tracklet_comb_cost.json')
-    # write_dict_to_json(cluster_dict, 'data/cluster_dict.json')
-    # write_dict_to_json(coarse_tracklet_connects, 'data/coarse_tracklet_connects.json')
-    # write_dict_to_json(cluster_cost_dict, 'data/cluster_cost_dict.json')
-    
+    cluster_dict, tracklet_time_range, coarse_tracklet_connects, tracklet_cost_dict = init_clustering(tnt_model, coarse_track_dict)
+
     # graph algorithm adjusts the cluster
-    cluster_dict = get_optimal_cluster(cluster_dict, coarse_tracklet_connects, tracklet_comb_cost_dict)
+    cluster_list, min_cost = get_optimal_cluster(coarse_tracklet_connects, tracklet_cost_dict)
+    
+    # post processing
+    for cluster in cluster_list:
+        cluster_id = min(cluster)
+        for track_id in cluster:
+            if track_id == cluster_id:
+                continue
+            cluster_dict.pop(track_id)
+            cluster_dict[cluster_id].append(track_id)
+    # write_dict_to_json(cluster_dict, 'data/new_cluster_dict.json')
+    
+    # generate cluster feat dict, cluster_id: np.array((frame_len, emb_size+4+1)), xmin, ymin, xmax, ymax
+    cluster_feat_dict, cluster_frame_range = cluster_dict_processing(coarse_track_dict, tracklet_time_range, cluster_dict)
+        
+    # visualize based on cluster_id, locations and labels. One color for one cluster.
+    visualize_dict = {} # frame_id: {track_id: {color: , label: , loc: [xmin, ymin, xmax, ymax]}}
+    for frame_id in range(frame_len):
+        visualize_dict[frame_id] = {}
+    for cluster_id in cluster_feat_dict.keys():
+        # color
+        loc = cluster_feat[cluster_id][:, -5:-1] # (frame_len, 4)
+        label = cluster_feat[cluster_id][:, -1] # (frame_len, 1), vote for the most proper label
+        # visualize color label loc
+
+
+
+
     
     
 
