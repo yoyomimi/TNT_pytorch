@@ -39,7 +39,7 @@ protobuf==3.10.0
 pycocotools==2.0.0
 pycosat==0.6.3
 pycparser==2.19
-PyInstaller==3.5
+PyInstaller==3.6
 pyOpenSSL==19.1.0
 pyparsing==2.4.2
 PySocks==1.7.1
