@@ -44,7 +44,12 @@ def gen_track_gt_dict(data_root, save_dirs):
         'DontCare': -1,
         'Pedestrian': 0,
         'Car': 1,
-        'Cyclist': 2
+        'Cyclist': 2,
+        'Van': 3,
+        'Truck': 4,
+        'Person': 5,
+        'Tram': 6,
+        'Misc': 7
     }
     videos_dir_list = os.listdir(data_root)
     for videos in videos_dir_list:

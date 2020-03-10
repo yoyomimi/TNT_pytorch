@@ -111,7 +111,6 @@ class FCOSLoss(nn.Module):
             self.alpha, 
             self.gamma
         )
-
         pos_bbox_preds = flatten_bbox_preds[pos_inds]
         pos_centerness = flatten_centerness[pos_inds]
 

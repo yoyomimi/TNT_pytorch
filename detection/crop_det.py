@@ -26,6 +26,11 @@ def write_crop(img, boxes, labels, frame_crop_path, frame_id=None):
         1: 'Pedestrian',
         2: 'Car',
         3: 'Cyclist',
+        4: 'Van',
+        5: 'Truck',
+        6: 'Person',
+        7: 'Tram',
+        8: 'Misc',
     }
     for i in range(len(boxes)):
         xmin, ymin, xmax, ymax = boxes[i]
@@ -33,7 +38,7 @@ def write_crop(img, boxes, labels, frame_crop_path, frame_id=None):
         ymin = math.floor(ymin)
         xmax = math.ceil(xmax)
         ymax = math.ceil(ymax)
-        if int(labels[i]) in [1, 2, 3]:
+        if int(labels[i]) in [1, 2, 3, 4, 5, 6, 7, 8]:
             label = class_dict[int(labels[i])]
         if frame_id is None:
             img_crop_path = osp.join(frame_crop_path, f'{label}_{xmin}_{ymin}_{xmax}_{ymax}_crop.jpg')

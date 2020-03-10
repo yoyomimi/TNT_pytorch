@@ -3,6 +3,10 @@
 # Created by Mingfei Chen (lasiafly@gmail.com)
 # Created On: 2020-1-20
 # ------------------------------------------------------------------------------
+from __future__ import division
+from __future__ import print_function
+from __future__ import with_statement
+
 import argparse
 import random
 
@@ -124,6 +128,7 @@ def main_per_worker(process_index, ngpus_per_node, args):
         train_sampler = None
         batch_size = cfg.DATASET.IMG_NUM_PER_GPU * ngpus_per_node
     
+    print('BATCH_SIZE: ', batch_size)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=batch_size,
@@ -165,6 +170,7 @@ if __name__ == '__main__':
     args = parse_args()
     args.distributed = (args.world_size > 1 or args.distributed)
     ngpus_per_node = torch.cuda.device_count()
+    # ngpus_per_node = 1
     print(f"Using {ngpus_per_node} gpus in machine {args.rank}")
     print(f"Distributed training = {args.distributed}")
 

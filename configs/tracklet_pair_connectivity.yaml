@@ -7,7 +7,7 @@ CUDNN:
   DETERMINISTIC: False
   ENABLED: True
 DATASET:
-  ROOT: '/mnt/cephfs_new_wj/cv/chenmingfei.lasia/TNT_pytorch/data/crop_data'
+  ROOT: '/mnt/ht/students/cmf/TNT_pytorch/data/crop_data'
   IMG_NUM_PER_GPU: 4
   MEAN: [102.9801, 115.9465, 122.7717]
   STD: [1, 1, 1]

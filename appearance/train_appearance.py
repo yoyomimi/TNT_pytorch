@@ -15,7 +15,6 @@ import _init_paths
 from configs import cfg
 from configs import update_config
 
-# from datasets.data_collect import triplet_collect #TODO
 from appearance.backbones.inception_resnet_v1 import InceptionResnetV1
 from appearance.loss.facenet_loss import triplet_loss
 

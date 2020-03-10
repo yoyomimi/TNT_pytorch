@@ -38,7 +38,6 @@ class FCOSTrainer(BaseTrainer):
         imgs = data[0]
         targets = data[1]
         cls_score, bbox_pred, centerness = self.model(imgs)
-
         loss = self.criterion(cls_score, bbox_pred, centerness, targets)
         num_pos = loss['num_pos']
         if num_pos > 0:

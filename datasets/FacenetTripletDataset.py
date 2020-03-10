@@ -48,6 +48,8 @@ class FacenetTripletDataset(Dataset):
                 for track_id in track_dict[video_name].keys():
                     class_name = track_dict[video_name][track_id][0]
                     frame_list = track_dict[video_name][track_id][1]
+                    if len(frame_list) < 2:
+                        continue
                     for i in range(len(frame_list)*4):
                         anchor_frame_id, pos_frame_id = random.sample(frame_list, 2)
                         anchor_path = self.get_crop_path(video_name, track_id, anchor_frame_id, class_name)
@@ -107,6 +109,8 @@ class FacenetTripletDataset(Dataset):
             logging.error("Cannot found negative image data: " + neg_path)
             raise FileNotFoundError
         neg_img = cv2.imread(neg_path, cv2.IMREAD_COLOR)
+        # print(pos_path, pos_img.shape)
+        # print(neg_path, neg_img.shape)
 
         if self.transform is not None:
             anchor_img = self.transform(anchor_img)

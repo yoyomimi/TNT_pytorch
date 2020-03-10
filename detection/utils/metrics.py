@@ -200,6 +200,11 @@ def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=
         1: 'Pedestrian',
         2: 'Car',
         3: 'Cyclist',
+        4: 'Van',
+        5: 'Truck',
+        6: 'Person',
+        7: 'Tram',
+        8: 'Misc',
     }
     crop_img = []
     mean_color = []
@@ -217,11 +222,11 @@ def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=
             for i in range(3):
                 now_mean_color[i] = np.mean(im[:,:,i]) / 255.0
             mean_color.append(now_mean_color)
-        elif demo_frame is None and is_crop == False and is_cluster == False:
+        elif demo_frame is None and is_crop == False:
             cv2.rectangle(orig_image, (box[0], box[1]),
                          (box[2], box[3]), (0, 255, 9), 4)
             label_idx = int(labels[i])
-            if label_idx in [0, 1, 2, 3]:
+            if label_idx in [0, 1, 2, 3, 4, 5, 6, 7, 8]:
                 label = class_dict[label_idx]
             else:
                 label = 'other'

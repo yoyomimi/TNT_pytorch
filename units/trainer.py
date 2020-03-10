@@ -7,6 +7,7 @@ from tensorboardX import SummaryWriter
 
 from utils.utils import AverageMeter
 from utils.utils import save_checkpoint
+from torch import autograd
 
 class BaseTrainer(object):
     def __init__(self,
@@ -82,7 +83,8 @@ class BaseTrainer(object):
                 total_loss = loss
             # optimization
             self.optimizer.zero_grad()
-            total_loss.backward()
+            with autograd.detect_anomaly():
+                total_loss.backward()
             self.optimizer.step()
             self.lr_scheduler.step()
             # time for training(forward & loss computation & optimization) on one batch

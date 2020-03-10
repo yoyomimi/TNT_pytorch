@@ -135,3 +135,4 @@ output/
 fcos_detector/
 eval_outdir/
 crop_det/
+get-pip.py

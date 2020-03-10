@@ -39,7 +39,7 @@ class Crop(object):
     def __call__(self, image, boxes=None, labels=None, no_object=False):
         if image.shape[1] > self.image_size:
             sz1 = int(image.shape[1]//2)
-            sz2 = int(image_size//2)
+            sz2 = int(self.image_size//2)
             if self.random_crop:
                 diff = sz1 - sz2
                 (h, v) = (np.random.randint(-diff, diff+1), np.random.randint(-diff, diff+1))
