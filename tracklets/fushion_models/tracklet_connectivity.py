@@ -48,8 +48,6 @@ class TrackletConnectivity(nn.Module):
         )
 
         self.pred_fc = nn.Linear(1024, 2) # [connected conf, not connected conf]
-        
-        self.softmax = nn.Softmax(dim=1)
 
         # TODO
         # self.init_weights()
@@ -93,8 +91,8 @@ class TrackletConnectivity(nn.Module):
         x = self.fc1(x)
         # fc_2 -> (bs, 1024)
         x = self.fc2(x)
-        # fc_clssfier -> (bs, 1)
-        out = self.softmax(self.pred_fc(x))
+        # fc_clssfier -> (bs, 2)
+        out = self.pred_fc(x)
 
         return out
 
