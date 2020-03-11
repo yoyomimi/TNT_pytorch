@@ -24,9 +24,9 @@ MODEL:
     STACK_NUM: 3
   APPEARANCE:
     EMB_SIZE: 512
-    WEIGHTS: '/mnt/cephfs_new_wj/cv/chenmingfei.lasia/TNT_pytorch/work_dirs/facenet_triplet_appearance/2020-02-24-11-40/InceptionResnetV1_epoch012_iter001500_checkpoint.pth'
+    WEIGHTS: '/mnt/ht/students/cmf/TNT_pytorch/work_dirs/facenet_triplet_appearance/2020-03-11-05-18/InceptionResnetV1_epoch001_iter024000_checkpoint.pth'
   RESUME_PATH: ''
-  DETECTION_WEIGHTS: '/mnt/cephfs_new_wj/cv/chenmingfei.lasia/TNT_pytorch/work_dirs/fcos_detector/2020-02-21-22-54/FCOS_epoch222_iter002000_checkpoint.pth'
+  DETECTION_WEIGHTS: '/mnt/ht/students/cmf/TNT_pytorch/work_dirs/fcos_detector/2020-03-10-05-51/FCOS_epoch012_iter024000_checkpoint.pth'
   BACKBONE:
     PRETRAINED: True
     CONV_BODY: 'R-50-FPN-RETINANET'
@@ -46,7 +46,7 @@ MODEL:
     STRIDES: (8, 16, 32, 64, 128)
 TEST:
   TEST_SIZE: (352, 1216) # min_size, max_size
-  CROP_SZIE: (182, 182)
+  CROP_SZIE: (91, 182)
   NMS_THRESHOLD: 0.5
   SCORE_THRESHOLD: 0.35
   AP_IOU: 0.5

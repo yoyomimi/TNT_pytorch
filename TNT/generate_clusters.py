@@ -89,33 +89,39 @@ if __name__ == '__main__':
 
     # get det result dict using the detector
     det_result = {}
+    crop_im = {}
     for i, jpg_path in tqdm(enumerate(jpg_paths)):
         if jpg_path.split('.')[-1].lower() not in ['jpg', 'png', 'jpeg', 'bmp']:
             continue
         frame_id = int(jpg_path.split('.')[-2].split('/')[-1]) # start from 0
-        # img:(min_size, max_size, 3), boxes:(obj_num, 4), labels:(obj_num,) numpy type, mean_color <list> list of array(3)
-        img, boxes, labels, mean_color = run_fcos_det_example(cfg,
+        # img:(min_size, max_size, 3), boxes:(obj_num, 4), labels:(obj_num,) numpy type, crop_index <list> list of array(1)
+        img, boxes, labels, crop_index = run_fcos_det_example(cfg,
             criterion,
             jpg_path,
             det_transform,
             detector,
             ap_transform=ap_transform,
         )
+        # {'frame_id': (obj_num, crop_min, crop_max, 3)}
+        crop_im[frame_id] = img
         boxes[:, 2] = boxes[:, 2] - boxes[:, 0] # w
         boxes[:, 3] = boxes[:, 3] - boxes[:, 1] # h
         img = img.cuda(non_blocking=True)
         img_embs = get_embeddings(emb, img).cpu().data.numpy()
         assert len(img_embs) == len(boxes) == len(labels) == len(mean_color)
         obj_num = len(img_embs)
-        # {'frame_id': (obj_num, emb_size+4+1+3) emb x y w h label(float) mean_color(array(3))}
-        det_result[frame_id] = np.zeros((obj_num, emb_size+4+1+3))
+        # {'frame_id': (obj_num, emb_size+4+1+3) emb x y w h label(float) crop_index(array(1))}
+        det_result[frame_id] = np.zeros((obj_num, emb_size+4+1+1))
         det_result[frame_id][:, :emb_size] = img_embs
         det_result[frame_id][:, emb_size: emb_size+4] = boxes
         det_result[frame_id][:, emb_size+4] = labels
-        det_result[frame_id][:, emb_size+5:] = mean_color
+        det_result[frame_id][:, emb_size+5:] = crop_index
     
     # use coarse constriant to get coarse track dict
-    coarse_track_dict = merge_det(det_result)
+    # label mask
+    coarse_track_dict = merge_det(det_result, crop_im)
+    det_result.clear()
+    crop_im.clear()
 
     # init cluster
     tnt_model = get_model(cfg, cfg.MODEL.FILE, cfg.MODEL.NAME)

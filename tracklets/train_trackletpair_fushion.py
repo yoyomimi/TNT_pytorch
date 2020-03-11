@@ -23,7 +23,7 @@ from appearance.backbones.inception_resnet_v1 import InceptionResnetV1
 from tracklets.trainer.trackletpair_fushion_trainer import trackletpairConnectTrainer
 from datasets.data_collect import tracklet_pair_collect
 from datasets.TrackletpairDataset import TrackletpairDataset
-from datasets.transform import FacenetInferenceTransform
+from datasets.transform import TNTTransform
 from datasets.sampler import BalancedBatchSampler
 
 from utils.utils import create_logger
@@ -32,7 +32,6 @@ from utils.utils import get_optimizer
 from utils.utils import get_lr_scheduler
 from utils.utils import load_checkpoint
 from utils.utils import load_eval_model
-
 
 
 def parse_args():
@@ -102,12 +101,11 @@ def main_per_worker(process_index, ngpus_per_node, args):
     assert cfg.MODEL.APPEARANCE.WEIGHTS != ''
     load_eval_model(cfg.MODEL.APPEARANCE.WEIGHTS, emb)
 
-    # TODO change based on the paper
     optimizer = get_optimizer(cfg, model)
     model, optimizer, last_iter = load_checkpoint(cfg, model, optimizer)
     lr_scheduler = get_lr_scheduler(cfg, optimizer, last_iter)
 
-    transform = FacenetInferenceTransform(size=(cfg.TRAIN.INPUT_MIN, cfg.TRAIN.INPUT_MAX))
+    transform = TNTTransform(size=(cfg.TRAIN.INPUT_MIN, cfg.TRAIN.INPUT_MAX))
     train_dataset = TrackletpairDataset(cfg.DATASET.ROOT, transform=transform, is_train=True)
     eval_dataset = TrackletpairDataset(cfg.DATASET.ROOT, transform=transform, is_train=False)
 
@@ -195,7 +193,8 @@ def main_per_worker(process_index, ngpus_per_node, args):
 if __name__ == '__main__':
     args = parse_args()
     args.distributed = (args.world_size > 1 or args.distributed)
-    ngpus_per_node = torch.cuda.device_count()
+    # ngpus_per_node = torch.cuda.device_count()
+    ngpus_per_node = 1
     print(f"Using {ngpus_per_node} gpus in machine {args.rank}")
     print(f"Distributed training = {args.distributed}")
 

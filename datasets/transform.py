@@ -55,6 +55,12 @@ class SubtractMeans(object):
         image -= self.mean
         return image.astype(np.float32), boxes, labels
 
+class Normalize(object):
+    def __call__(self, image, boxes=None, labels=None, no_object=False):
+        image = image.astype(np.float32)
+        image = (image - np.mean(image)) / np.std(image)
+        return image.astype(np.float32), boxes, labels
+
 
 class ToAbsoluteCoords(object):
     def __call__(self, image, boxes=None, labels=None, no_object=False):
@@ -205,6 +211,22 @@ class FacenetTransform(object):
         return img
 
 class FacenetInferenceTransform(object):
+    def __init__(self, size=[182, 182]):
+        # BGR
+        self.min_size, self.max_size = size
+
+        self.transform = Compose([
+            ConvertFromInts(),
+            Resize(self.min_size, self.max_size),
+            Normalize(),
+            ToTensor(),
+        ])
+
+    def __call__(self, img):
+        img, _, _ = self.transform(img)
+        return img
+
+class TNTTransform(object):
     def __init__(self, size=[182, 182], mean=(102.9801, 115.9465, 122.7717), std=(1.0, 1.0, 1.0)):
         # BGR
         self.mean = mean

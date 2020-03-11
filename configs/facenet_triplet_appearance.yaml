@@ -16,6 +16,7 @@ MODEL:
   NAME: InceptionResnetV1
   FEATURE_PATH: 'data/20180402-114759-vggface2-features.pt'
   LOGITS_PATH: 'data/20180402-114759-vggface2-logits.pt'
+  RESUME_PATH: 'work_dirs/facenet_triplet_appearance/2020-03-11-05-18/InceptionResnetV1_epoch001_iter024000_checkpoint.pth'
 TRAINER:
   FILE: appearanceTrainer
   NAME: appearanceTrainer
@@ -24,14 +25,14 @@ TRAIN:
   LR_FACTOR: 0.1
   MOMENTUM: 0.9
   WEIGHT_DECAY: 0.0001
-  LR_STEPS: [60000, 80000]
-  MAX_ITERATIONS: 90000
+  LR_STEPS: [12000, 16000]
+  MAX_ITERATIONS: 25000
   OPTIMIZER: sgd
   RESUME: True
   INPUT_MIN: 91
   INPUT_MAX: 182 
   PRINT_FREQ: 200
-  SAVE_INTERVAL: 5000
+  SAVE_INTERVAL: 2000
   SAVE_EVERY_CHECKPOINT: True
   VAL_WHEN_TRAIN: False
 TEST:

@@ -207,7 +207,7 @@ def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=
         8: 'Misc',
     }
     crop_img = []
-    mean_color = []
+    crop_index = []
 
     for i in range(boxes.size(0)):
         box = boxes[i]
@@ -217,11 +217,9 @@ def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=
         if ap_transform:
             # crop img
             im = orig_image[math.floor(box[1]):math.ceil(box[3]), math.floor(box[0]):math.ceil(box[2]), :]
-            crop_img.append(ap_transform(im))
-            now_mean_color = np.zeros(3)
-            for i in range(3):
-                now_mean_color[i] = np.mean(im[:,:,i]) / 255.0
-            mean_color.append(now_mean_color)
+            new_im = ap_transform(im)
+            crop_img.append(new_im)
+            crop_index.append(i)
         elif demo_frame is None and is_crop == False:
             cv2.rectangle(orig_image, (box[0], box[1]),
                          (box[2], box[3]), (0, 255, 9), 4)
@@ -243,7 +241,7 @@ def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=
         return orig_image, np.array(new_boxes), labels.cpu().data.numpy()
 
     if ap_transform:
-        return torch.stack(crop_img), np.array(new_boxes), labels.cpu().data.numpy(), np.vstack(mean_color)
+        return torch.stack(crop_img), np.array(new_boxes), labels.cpu().data.numpy(), np.vstack(crop_index)
 
     return orig_image
 
