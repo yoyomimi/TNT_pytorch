@@ -129,10 +129,12 @@ def main_per_worker(process_index, ngpus_per_node, args):
     else:
         assert proc_rank == 0, ('proc_rank != 0, it will influence '
                                 'the evaluation procedure')
-        model = torch.nn.DataParallel(model).cuda()
+        # model = torch.nn.DataParallel(model).cuda()
+        model = model.cuda()
         train_sampler = None
         batch_size = cfg.DATASET.IMG_NUM_PER_GPU * ngpus_per_node
-    
+
+    print('BATCH_SIZE: ', batch_size)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=batch_size,
@@ -170,13 +172,14 @@ def main_per_worker(process_index, ngpus_per_node, args):
         Trainer.train(train_loader, eval_loader)
 
     # eval
-    Trainer.evaluate(eval_loader)
+    # Trainer.evaluate(eval_loader)
 
 
 if __name__ == '__main__':
     args = parse_args()
     args.distributed = (args.world_size > 1 or args.distributed)
-    ngpus_per_node = torch.cuda.device_count()
+    # ngpus_per_node = torch.cuda.device_count()
+    ngpus_per_node = 1
     print(f"Using {ngpus_per_node} gpus in machine {args.rank}")
     print(f"Distributed training = {args.distributed}")
 

@@ -108,7 +108,6 @@ if __name__ == '__main__':
          help='you can choose a directory root to save new training and eval directories')
     args = parser.parse_args()
 
-
     # create crop_dir training/trackid/frameid.jpg eval/trackid/frameid.jpg
     if not osp.exists(args.dst_root):
         os.mkdir(args.dst_root)
@@ -118,7 +117,6 @@ if __name__ == '__main__':
     dst_eval_root = osp.join(args.dst_root, 'eval')
     if not osp.exists(dst_eval_root):
         os.mkdir(dst_eval_root)
-
 
     train_gt_dict = gen_track_gt_dict(osp.join(args.data_root, 'training'), dst_train_root)
     gt_save_path_train = osp.join(dst_train_root, 'gt_train_track_dict.json')

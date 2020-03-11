@@ -5,6 +5,7 @@
 # ------------------------------------------------------------------------------
 import cv2
 import random
+import time
 import json
 import numpy as np
 import os
@@ -109,9 +110,7 @@ class FacenetTripletDataset(Dataset):
             logging.error("Cannot found negative image data: " + neg_path)
             raise FileNotFoundError
         neg_img = cv2.imread(neg_path, cv2.IMREAD_COLOR)
-        # print(pos_path, pos_img.shape)
-        # print(neg_path, neg_img.shape)
-
+        
         if self.transform is not None:
             anchor_img = self.transform(anchor_img)
             pos_img = self.transform(pos_img)

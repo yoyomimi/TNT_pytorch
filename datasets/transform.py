@@ -29,24 +29,6 @@ class Compose(object):
 class ConvertFromInts(object):
     def __call__(self, image, boxes=None, labels=None, no_object=False):
         return image.astype(np.float32), boxes, labels
-
-
-class Crop(object):
-    def __init__(self, random_crop=True, image_size=182):
-        self.random_crop = random_crop
-        self.image_size = image_size
-
-    def __call__(self, image, boxes=None, labels=None, no_object=False):
-        if image.shape[1] > self.image_size:
-            sz1 = int(image.shape[1]//2)
-            sz2 = int(self.image_size//2)
-            if self.random_crop:
-                diff = sz1 - sz2
-                (h, v) = (np.random.randint(-diff, diff+1), np.random.randint(-diff, diff+1))
-            else:
-                (h, v) = (0,0)
-            image = image[(sz1-sz2+v):(sz1+sz2+v),(sz1-sz2+h):(sz1+sz2+h),:]
-        return image, boxes, labels
   
 
 class Flip(object):
@@ -211,8 +193,8 @@ class FacenetTransform(object):
         self.transform = Compose([
             ConvertFromInts(),
             Random_rotate_image(),
-            Crop(image_size=self.max_size),
             Flip(),
+            # no crop is ok?
             Resize(self.min_size, self.max_size),
             SubtractMeans(mean),
             ToTensor(),
