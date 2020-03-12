@@ -130,7 +130,6 @@ def merge_det(det_dict, crop_im, linear_pred_thresh=5, coeff_norm_thresh=0.15, p
         crop_id_2 = np.array(det_dict[i][:, emb_size+5]).astype(np.int64)
 
         color_dist = np.zeros((pre_obj_num, now_obj_num))
-        print(crop_id_1[n1], crop_id_2[n2], n1, n2, crop_im[i-1].shape, crop_im[i].shape)
         for n1 in range(pre_obj_num):
             for n2 in range(now_obj_num):
                 color_dist[n1,n2] = np.sum(crop_im[i-1][crop_id_1[n1]] * crop_im[i][crop_id_2[n2]])
