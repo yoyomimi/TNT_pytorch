@@ -208,7 +208,6 @@ def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=
         8: 'Misc',
     }
     crop_img = []
-    crop_index = []
     new_img = []
 
     for i in range(boxes.size(0)):
@@ -223,7 +222,6 @@ def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=
             crop_im = crop_transform(im)
             new_img.append(new_im)
             crop_img.append(crop_im[np.newaxis, ...])
-            crop_index.append(i)
         elif demo_frame is None and is_crop == False:
             cv2.rectangle(orig_image, (box[0], box[1]),
                          (box[2], box[3]), (0, 255, 9), 4)
@@ -245,7 +243,7 @@ def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=
         return orig_image, np.array(new_boxes), labels.cpu().data.numpy()
 
     if ap_transform:
-        return torch.stack(new_img), np.vstack(crop_img), np.array(new_boxes), labels.cpu().data.numpy(), np.vstack(crop_index)
+        return torch.stack(new_img), np.vstack(crop_img), np.array(new_boxes), labels.cpu().data.numpy()
 
     return orig_image
 

@@ -110,8 +110,8 @@ if __name__ == '__main__':
         if jpg_path.split('.')[-1].lower() not in ['jpg', 'png', 'jpeg', 'bmp']:
             continue
         frame_id = int(jpg_path.split('.')[-2].split('/')[-1]) # start from 0
-        # img:(min_size, max_size, 3), boxes:(obj_num, 4), labels:(obj_num,) numpy type, crop_index <list> list of array(1)
-        img, crop_img, boxes, labels, crop_index = run_fcos_det_example(cfg,
+        # img:(min_size, max_size, 3), boxes:(obj_num, 4), labels:(obj_num,) numpy type<list> list of array(1)
+        img, crop_img, boxes, labels = run_fcos_det_example(cfg,
             criterion,
             jpg_path,
             det_transform,
@@ -123,9 +123,9 @@ if __name__ == '__main__':
         boxes[:, 3] = boxes[:, 3] - boxes[:, 1] # h
         img = img.cuda(non_blocking=True)
         img_embs = get_embeddings(emb, img).cpu().data.numpy()
-        assert len(img_embs) == len(crop_img) == len(boxes) == len(labels) == len(crop_index)
+        assert len(img_embs) == len(crop_img) == len(boxes) == len(labels)
         for label in range(1, cfg.DATASET.NUM_CLASSES+1):
-            label_idx = np.where(labels==label)[0]
+            label_idx = sorted(list(np.where(labels==label)[0]))
             obj_num = len(label_idx)
             # {'frame_id': (obj_num, crop_min, crop_max, 3)}
             crop_im[label][frame_id] = crop_img[label_idx]
@@ -134,7 +134,7 @@ if __name__ == '__main__':
             det_result[label][frame_id][:, :emb_size] = img_embs[label_idx]
             det_result[label][frame_id][:, emb_size: emb_size+4] = boxes[label_idx]
             det_result[label][frame_id][:, emb_size+4] = labels[label_idx]
-            det_result[label][frame_id][:, emb_size+5:] = crop_index[label_idx]
+            det_result[label][frame_id][:, emb_size+5:] = range(obj_num)
     
     # init cluster
     tnt_model = get_model(cfg, cfg.MODEL.FILE, cfg.MODEL.NAME)
