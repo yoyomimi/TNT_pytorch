@@ -12,7 +12,7 @@ DATASET:
   IMG_NUM_PER_GPU: 8
   MEAN: [102.9801, 115.9465, 122.7717]
   STD: [1, 1, 1]
-  NUM_CLASSES: 4
+  NUM_CLASSES: 9
 TRACKLET:
   WINDOW_lEN: 64
 MODEL:
@@ -25,10 +25,10 @@ MODEL:
   APPEARANCE:
     EMB_SIZE: 512
     WEIGHTS: '/mnt/ht/students/cmf/TNT_pytorch/work_dirs/facenet_triplet_appearance/2020-03-11-05-18/InceptionResnetV1_epoch001_iter024000_checkpoint.pth'
-  RESUME_PATH: ''
+  RESUME_PATH: '/mnt/ht/students/cmf/TNT_pytorch/work_dirs/trackletpair_connectivity/2020-03-11-08-29/TrackletConnectivity_epoch000_iter014000_checkpoint.pth'
   DETECTION_WEIGHTS: '/mnt/ht/students/cmf/TNT_pytorch/work_dirs/fcos_detector/2020-03-10-05-51/FCOS_epoch012_iter024000_checkpoint.pth'
   BACKBONE:
-    PRETRAINED: True
+    PRETRAINED: False
     CONV_BODY: 'R-50-FPN-RETINANET'
     WEIGHTS: ''
   RESNETS:
@@ -47,8 +47,8 @@ MODEL:
 TEST:
   TEST_SIZE: (352, 1216) # min_size, max_size
   CROP_SZIE: (91, 182)
-  NMS_THRESHOLD: 0.5
-  SCORE_THRESHOLD: 0.35
+  NMS_THRESHOLD: 0.1
+  SCORE_THRESHOLD: 0.7
   AP_IOU: 0.5
   MAX_PER_IMG: 100
   NMS_PRE: 1000

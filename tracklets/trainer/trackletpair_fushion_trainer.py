@@ -69,7 +69,7 @@ class trackletpairConnectTrainer(BaseTrainer):
             if count > 2:
                 break
             tracklet_pair_features, targets = self._read_inputs(data)
-            cls_score = self.model(tracklet_pair_features).data.cpu() 
+            cls_score = self.model(tracklet_pair_features).sigmoid().data.cpu() 
             pred = cls_score.max(1, keepdim=True)[1]
             true = pred.eq(targets.data.cpu().view_as(pred)).numpy()
             acc += np.sum(true) / len(pred)

@@ -35,12 +35,12 @@ def bbox_associate(overlap_mat, IOU_thresh):
     return idx1, idx2 # start from 0
 
 # wait to add in cfg: linear_pred_thresh, coeff_norm_thresh, pred_loc_iou_tresh, pred_use_F
-def merge_det(det_dict, crop_im, linear_pred_thresh=5, coeff_norm_thresh=0.5, pred_loc_iou_tresh=0.4, pred_F_mat=None):
+def merge_det(det_dict, crop_im, linear_pred_thresh=5, coeff_norm_thresh=0.15, pred_loc_iou_tresh=0.2, pred_F_mat=None):
     """merge det from the neighbour frame (based on frame_dist limitation) using emb_dist(?)
     
     Args:
         det_dict{
-            'frame_id': (obj_num, emb_size+4+1+3), for one obj_det in one frame_id [img_emb(512) x y w h label crop_index(array(1))], np.array
+            'frame_id': (obj_num, emb_size+4+1+1), for one obj_det in one frame_id [img_emb(512) x y w h label crop_index(array(1))], np.array
         }
         crop_im{
             'frame_id': (obj_num, crop_min, crop_max, 3)
@@ -67,11 +67,13 @@ def merge_det(det_dict, crop_im, linear_pred_thresh=5, coeff_norm_thresh=0.5, pr
 
     # init tracklet using the first frame
     new_track_id = []
+    max_track_id = -1
     for track_id in range(now_obj_num):
         track_dict[track_id] = np.zeros((frame_num, feat_size))-1 # set -1 for initial
-        track_dict[track_id][0] = det_dict[0][track_id][:-3]
+        track_dict[track_id][0] = det_dict[0][track_id][:-1]
         new_track_id.append(track_id)
-    max_track_id = new_track_id[-1]
+    if len(new_track_id):
+        max_track_id = new_track_id[-1]
     
     # process the later frames, frame_id start from 0
     for i in range(1, frame_num):
@@ -79,6 +81,16 @@ def merge_det(det_dict, crop_im, linear_pred_thresh=5, coeff_norm_thresh=0.5, pr
         now_obj_num = det_dict[i].shape[0]
         pre_track_id = new_track_id.copy()
         new_track_id = []
+        if now_obj_num == 0:
+            continue
+        if pre_obj_num == 0 and now_obj_num > 0:
+            for track_id in range(max_track_id+1, max_track_id+now_obj_num+1):
+                track_dict[track_id] = np.zeros((frame_num, feat_size))-1 # set -1 for initial
+                track_dict[track_id][i] = det_dict[i][track_id-max_track_id-1][:-1]
+                new_track_id.append(track_id)
+            max_track_id = new_track_id[-1]
+            continue
+
         track_idx1 = []
         track_idx2 = []
         pred_bbox1 = np.zeros((pre_obj_num, 4))
@@ -114,23 +126,26 @@ def merge_det(det_dict, crop_im, linear_pred_thresh=5, coeff_norm_thresh=0.5, pr
         overlap_mat, _ ,_ ,_ = get_overlap(pred_bbox1, det_dict[i][:, emb_size:emb_size+4])
 
         # color dist coeff norm
-        crop_id_1 = int(det_dict[i-1][:, emb_size+5])
-        crop_id_2 = int(det_dict[i][:, emb_size+5])
+        crop_id_1 = np.array(det_dict[i-1][:, emb_size+5]).astype(np.int64)
+        crop_id_2 = np.array(det_dict[i][:, emb_size+5]).astype(np.int64)
 
         color_dist = np.zeros((pre_obj_num, now_obj_num))
+        print(crop_id_1[n1], crop_id_2[n2], n1, n2, crop_im[i-1].shape, crop_im[i].shape)
         for n1 in range(pre_obj_num):
             for n2 in range(now_obj_num):
-                color_dist[n1,n2] = np.mean(crop_im[i-1][crop_id_1[n1]] * crop_im[i][crop_id_2[n2]])
+                color_dist[n1,n2] = np.sum(crop_im[i-1][crop_id_1[n1]] * crop_im[i][crop_id_2[n2]])
         
         if np.isnan(np.sum(color_dist)) or np.isnan(np.sum(overlap_mat)):
             raise Exception('Invalid Color Dist or Overlap Mat!')
-        overlap_mat[color_dist>coeff_norm_thresh] = 0        
+        overlap_mat[color_dist<coeff_norm_thresh] = 0      
         track_idx1, track_idx2 = bbox_associate(overlap_mat, pred_loc_iou_tresh)
+        # print('\nmat:', overlap_mat, '\n', track_idx1, track_idx2, '\n')
+
         # no matched pair
         if len(track_idx1) == 0:
             for track_id in range(max_track_id+1, max_track_id+now_obj_num+1):
                 track_dict[track_id] = np.zeros((frame_num, feat_size))-1 # set -1 for initial
-                track_dict[track_id][i] = det_dict[i][track_id-max_track_id-1][:-3]
+                track_dict[track_id][i] = det_dict[i][track_id-max_track_id-1][:-1]
                 new_track_id.append(track_id)
             max_track_id = new_track_id[-1]
         elif len(track_idx1) > 0:
@@ -141,15 +156,16 @@ def merge_det(det_dict, crop_im, linear_pred_thresh=5, coeff_norm_thresh=0.5, pr
                     # create new track
                     track_id = max_track_id + 1
                     track_dict[track_id] = np.zeros((frame_num, feat_size))-1 # set -1 for initial
-                    track_dict[track_id][i] = det_dict[i][obj_id][:-3]
+                    track_dict[track_id][i] = det_dict[i][obj_id][:-1]
                     new_track_id.append(track_id)
                     max_track_id += 1
                 elif len(temp_idx) > 0:
                     # mearge to existed track
                     obj_id_1 = track_idx1[temp_idx[0]]
                     track_id = pre_track_id[obj_id_1] # idx of track_idx in the front matches more
-                    track_dict[track_id][i] = det_dict[i][obj_id][:-3]
+                    track_dict[track_id][i] = det_dict[i][obj_id][:-1]
                     new_track_id.append(track_id)
+        # print(i-1, pre_track_id, '\n', i, new_track_id, '\n')
                     
     print('coarse_track_num', max_track_id+1)
     return track_dict

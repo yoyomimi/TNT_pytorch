@@ -58,7 +58,7 @@ class SubtractMeans(object):
 class Normalize(object):
     def __call__(self, image, boxes=None, labels=None, no_object=False):
         image = image.astype(np.float32)
-        image = (image - np.mean(image)) / np.std(image)
+        image = (image - np.mean(image)) / np.linalg.norm(image - np.mean(image))
         return image.astype(np.float32), boxes, labels
 
 
@@ -219,7 +219,6 @@ class FacenetInferenceTransform(object):
             ConvertFromInts(),
             Resize(self.min_size, self.max_size),
             Normalize(),
-            ToTensor(),
         ])
 
     def __call__(self, img):

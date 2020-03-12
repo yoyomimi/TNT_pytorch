@@ -14,6 +14,7 @@ from tqdm import tqdm
 
 import torch
 
+INF = 100
 
 def pred_connect_with_fusion(model, coarse_track_dict, tracklet_pair, emb_size, window_len=64, max_bs=64):
     """pred coarse neighbor tracklet pair connectivity.
@@ -70,7 +71,7 @@ def pred_connect_with_fusion(model, coarse_track_dict, tracklet_pair, emb_size, 
         # (bs, window_len, emb_size+4, 3)
         tracklet_pair_features_input = torch.from_numpy(tracklet_pair_features_input).type(torch.FloatTensor).cuda(non_blocking=True)
         # use tnt net to pred connectivity
-        cls_scores = model(tracklet_pair_features_input).data.cpu() # (bs, 2)
+        cls_scores = model(tracklet_pair_features_input).sigmoid().data.cpu() # (bs, 2)
         track_set_bs[:, 2] = cls_scores.max(1, keepdim=True)[1].squeeze(-1).numpy() # (bs, 1), 1 is connected
         # TODO is that right below?
         track_set_bs[:, 3] = (cls_scores[:, 0] - cls_scores[:, 1]).squeeze(-1).numpy() # (bs, 1), cost is max when neighbor pair apparently not connected
@@ -78,6 +79,7 @@ def pred_connect_with_fusion(model, coarse_track_dict, tracklet_pair, emb_size, 
         # delete if not debug
 
     track_set = np.vstack(track_set) # (pair_num, 4)
+    print('connected track_set num: ', len(np.where(track_set[:, 2]==1)[0]))
     
     tracklet_cost_dict = {}
     for i in range(len(track_set)):

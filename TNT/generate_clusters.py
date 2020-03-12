@@ -21,6 +21,7 @@ from utils.utils import write_dict_to_json
 
 from datasets.transform import FacenetInferenceTransform
 from datasets.transform import PredictionTransform
+from datasets.transform import TNTTransform
 
 from appearance.backbones.inception_resnet_v1 import InceptionResnetV1
 
@@ -85,88 +86,115 @@ if __name__ == '__main__':
     
     criterion = FCOSLoss(cfg, cfg.DATASET.NUM_CLASSES)
     det_transform = PredictionTransform(size=cfg.TEST.TEST_SIZE)
-    ap_transform = FacenetInferenceTransform(size=(cfg.TEST.CROP_SZIE))
+    ap_transform = TNTTransform(size=(cfg.TEST.CROP_SZIE))
+    crop_transform = FacenetInferenceTransform(size=(cfg.TEST.CROP_SZIE))
 
     # get det result dict using the detector
     det_result = {}
     crop_im = {}
+    class_dict = {
+        0: 'DontCare',
+        1: 'Pedestrian',
+        2: 'Car',
+        3: 'Cyclist',
+        4: 'Van',
+        5: 'Truck',
+        6: 'Person',
+        7: 'Tram',
+        8: 'Misc',
+    }
+    for label in range(1, cfg.DATASET.NUM_CLASSES+1):
+        det_result[label] = {}
+        crop_im[label] = {}
     for i, jpg_path in tqdm(enumerate(jpg_paths)):
         if jpg_path.split('.')[-1].lower() not in ['jpg', 'png', 'jpeg', 'bmp']:
             continue
         frame_id = int(jpg_path.split('.')[-2].split('/')[-1]) # start from 0
         # img:(min_size, max_size, 3), boxes:(obj_num, 4), labels:(obj_num,) numpy type, crop_index <list> list of array(1)
-        img, boxes, labels, crop_index = run_fcos_det_example(cfg,
+        img, crop_img, boxes, labels, crop_index = run_fcos_det_example(cfg,
             criterion,
             jpg_path,
             det_transform,
             detector,
             ap_transform=ap_transform,
+            crop_transform=crop_transform
         )
-        # {'frame_id': (obj_num, crop_min, crop_max, 3)}
-        crop_im[frame_id] = img
         boxes[:, 2] = boxes[:, 2] - boxes[:, 0] # w
         boxes[:, 3] = boxes[:, 3] - boxes[:, 1] # h
         img = img.cuda(non_blocking=True)
         img_embs = get_embeddings(emb, img).cpu().data.numpy()
-        assert len(img_embs) == len(boxes) == len(labels) == len(mean_color)
-        obj_num = len(img_embs)
-        # {'frame_id': (obj_num, emb_size+4+1+3) emb x y w h label(float) crop_index(array(1))}
-        det_result[frame_id] = np.zeros((obj_num, emb_size+4+1+1))
-        det_result[frame_id][:, :emb_size] = img_embs
-        det_result[frame_id][:, emb_size: emb_size+4] = boxes
-        det_result[frame_id][:, emb_size+4] = labels
-        det_result[frame_id][:, emb_size+5:] = crop_index
+        assert len(img_embs) == len(crop_img) == len(boxes) == len(labels) == len(crop_index)
+        for label in range(1, cfg.DATASET.NUM_CLASSES+1):
+            label_idx = np.where(labels==label)[0]
+            obj_num = len(label_idx)
+            # {'frame_id': (obj_num, crop_min, crop_max, 3)}
+            crop_im[label][frame_id] = crop_img[label_idx]
+            # {'frame_id': (obj_num, emb_size+4+1+3) emb x y w h label(float) crop_index(array(1))}
+            det_result[label][frame_id] = np.zeros((obj_num, emb_size+4+1+1))
+            det_result[label][frame_id][:, :emb_size] = img_embs[label_idx]
+            det_result[label][frame_id][:, emb_size: emb_size+4] = boxes[label_idx]
+            det_result[label][frame_id][:, emb_size+4] = labels[label_idx]
+            det_result[label][frame_id][:, emb_size+5:] = crop_index[label_idx]
     
-    # use coarse constriant to get coarse track dict
-    # label mask
-    coarse_track_dict = merge_det(det_result, crop_im)
-    det_result.clear()
-    crop_im.clear()
-
     # init cluster
     tnt_model = get_model(cfg, cfg.MODEL.FILE, cfg.MODEL.NAME)
     if cfg.MODEL.RESUME_PATH != '':
         load_eval_model(cfg.MODEL.RESUME_PATH, tnt_model)
     tnt_model.cuda().eval()
-    cluster_dict, tracklet_time_range, coarse_tracklet_connects, tracklet_cost_dict = init_clustering(tnt_model, coarse_track_dict)
+    cluster_per_label = {}
+    for label in range(1, cfg.DATASET.NUM_CLASSES+1):
+        # use coarse constriant to get coarse track dict
+        print("processing label: ", class_dict[label])
+        print("det num: ", len(det_result[label]))
+        coarse_track_dict = merge_det(det_result[label], crop_im[label])
+        det_result[label].clear()
+        crop_im[label].clear()
+    
+        cluster_dict, tracklet_time_range, coarse_tracklet_connects, tracklet_cost_dict = init_clustering(tnt_model, coarse_track_dict)
+        write_dict_to_json(coarse_tracklet_connects, 'data/' + class_dict[label] + '_coarse_tracklet_connects.json')
+        write_dict_to_json(tracklet_cost_dict, 'data/' + class_dict[label] + '_tracklet_cost_dict.json')
 
-    # graph algorithm adjusts the cluster
-    cluster_list, min_cost = get_optimal_cluster(coarse_tracklet_connects, tracklet_cost_dict)
+        # graph algorithm adjusts the cluster
+        cluster_list, min_cost = get_optimal_cluster(coarse_tracklet_connects, tracklet_cost_dict)
+
+        # post processing
+        for cluster in cluster_list:
+            cluster_id = min(cluster)
+            for track_id in cluster:
+                if track_id == cluster_id:
+                    continue
+                cluster_dict.pop(track_id)
+                cluster_dict[cluster_id].append(track_id)
+        # write_dict_to_json(cluster_dict, 'data/new_cluster_dict.json')
     
-    # post processing
-    for cluster in cluster_list:
-        cluster_id = min(cluster)
-        for track_id in cluster:
-            if track_id == cluster_id:
-                continue
-            cluster_dict.pop(track_id)
-            cluster_dict[cluster_id].append(track_id)
-    # write_dict_to_json(cluster_dict, 'data/new_cluster_dict.json')
-    
-    # generate cluster feat dict, cluster_id: np.array((frame_len, emb_size+4+1)), xmin, ymin, w, h
-    cluster_feat_dict, cluster_frame_range = cluster_dict_processing(coarse_track_dict, tracklet_time_range, cluster_dict)
-        
+        # generate cluster feat dict, cluster_id: np.array((frame_len, emb_size+4+1)), xmin, ymin, w, h
+        cluster_feat_dict, cluster_frame_range = cluster_dict_processing(coarse_track_dict, tracklet_time_range, cluster_dict)
+        cluster_per_label[label] = [cluster_feat_dict, cluster_frame_range]
+
     # visualize based on cluster_id, locations and labels. One color for one cluster.
-    visualize_dict = {} # frame_id: {track_id: {label: , loc: [xmin, ymin, xmax, ymax]}}
-    frame_len = len(cluster_feat_dict[0])
-    for frame_id in range(frame_len):
-        visualize_dict[frame_id] = {}
-    for cluster_id in cluster_feat_dict.keys():
-        loc = cluster_feat_dict[cluster_id][:, -5:-1] # (frame_len, 4)
-        # xmin, ymin, xmax, ymax
-        loc[:, 2] += loc[:, 0]
-        loc[:, 3] += loc[:, 1]
-        # the labels for one cluster have been voted to the same
-        label = cluster_feat_dict[cluster_id][:, -1] # (frame_len, 1) 
-        # visualize info with label and loc
-        min_t = int(cluster_frame_range[cluster_id][0])
-        max_t = int(cluster_frame_range[cluster_id][1])
-        for frame_id in range(min_t, max_t+1):
-             visualize_dict[frame_id][cluster_id] = dict(
-                 loc = loc[frame_id],
-                 class_id = int(label[frame_id])
-             )
-    write_dict_to_json(visualize_dict, 'data/visualize.json')
+    visualize_dict_per_label = {} # frame_id: {track_id: {label: , loc: [xmin, ymin, xmax, ymax]}}
+    for label in range(1, cfg.DATASET.NUM_CLASSES+1):
+        cluster_feat_dict, cluster_frame_range = cluster_per_label[label]
+        visualize_dict_per_label[label] = {}
+        visualize_dict = visualize_dict_per_label[label]
+
+        frame_len = len(cluster_feat_dict[0])
+        for frame_id in range(frame_len):
+            visualize_dict[frame_id] = {}
+        for cluster_id in cluster_feat_dict.keys():
+            loc = cluster_feat_dict[cluster_id][:, -5:-1] # (frame_len, 4)
+            # xmin, ymin, xmax, ymax
+            loc[:, 2] += loc[:, 0]
+            loc[:, 3] += loc[:, 1]
+            # visualize info with label and loc
+            min_t = int(cluster_frame_range[cluster_id][0])
+            max_t = int(cluster_frame_range[cluster_id][1])
+            for frame_id in range(min_t, max_t+1):
+                visualize_dict[frame_id][cluster_id] = dict(
+                    loc = loc[frame_id],
+                    class_id = int(label)
+                )
+    write_dict_to_json(visualize_dict_per_label, 'data/visualize.json')
 
 
 

@@ -174,7 +174,8 @@ def eval_fcos_det(cfg, criterion, eval_loader,
     return mAP, aps, pr_curves
 
 @torch.no_grad()
-def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=None, is_crop=False, ap_transform=None):
+def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=None, is_crop=False, 
+                         ap_transform=None, crop_transform=None):
     model.eval()
     if demo_frame is None:
         orig_image = cv2.imread(jpg_path, cv2.IMREAD_COLOR)
@@ -208,17 +209,20 @@ def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=
     }
     crop_img = []
     crop_index = []
+    new_img = []
 
     for i in range(boxes.size(0)):
         box = boxes[i]
         box[0:4:2] = box[0:4:2] / new_w * w
         box[1:4:2] = box[1:4:2] / new_h * h
         new_boxes.append(box.cpu().data.numpy())
-        if ap_transform:
+        if ap_transform and crop_transform:
             # crop img
             im = orig_image[math.floor(box[1]):math.ceil(box[3]), math.floor(box[0]):math.ceil(box[2]), :]
             new_im = ap_transform(im)
-            crop_img.append(new_im)
+            crop_im = crop_transform(im)
+            new_img.append(new_im)
+            crop_img.append(crop_im[np.newaxis, ...])
             crop_index.append(i)
         elif demo_frame is None and is_crop == False:
             cv2.rectangle(orig_image, (box[0], box[1]),
@@ -241,7 +245,7 @@ def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=
         return orig_image, np.array(new_boxes), labels.cpu().data.numpy()
 
     if ap_transform:
-        return torch.stack(crop_img), np.array(new_boxes), labels.cpu().data.numpy(), np.vstack(crop_index)
+        return torch.stack(new_img), np.vstack(crop_img), np.array(new_boxes), labels.cpu().data.numpy(), np.vstack(crop_index)
 
     return orig_image
 

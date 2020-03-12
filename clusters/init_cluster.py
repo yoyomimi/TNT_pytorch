@@ -15,6 +15,7 @@ from clusters.utils.trackletpair_connect import pred_connect_with_fusion
 from clusters.utils.tracklet_connect import define_coarse_tracklet_connections
 from clusters.utils.tracklet_connect import get_trackletpair_t_range
 
+from utils.utils import write_dict_to_json
 
 
 def update_neighbor(coarse_track_dict, track_set, tracklet_pair, coarse_tracklet_connects, emb_size, slide_window_len=64): 
@@ -89,7 +90,7 @@ def update_neighbor(coarse_track_dict, track_set, tracklet_pair, coarse_tracklet
 # add in config: time_dist_tresh, time_margin, time_cluster_dist, track_overlap_thresh, \
 # search_radius, clip_len, slide_window_len, cost_bias, refine_track_set
 def init_clustering(model, coarse_track_dict, remove_set=[], time_dist_tresh=11, time_margin=3, time_cluster_dist=24,
-                    track_overlap_thresh=0.45, search_radius=3, clip_len=6, slide_window_len=64, cost_bias=0, refine_track_set=None):
+                    track_overlap_thresh=0.7, search_radius=1, clip_len=6, slide_window_len=64, cost_bias=0, refine_track_set=None):
     """init time clusters and track clusters based on coarse_track_dict.
        
        Args: 

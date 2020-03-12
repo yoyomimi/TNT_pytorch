@@ -96,7 +96,7 @@ def linear_pred(x):
         return x
     else:
         y = np.array(range(len(x)))
-        slope, intercept, _, _, _ = stats.linregress(x, y)
+        slope, intercept, _, _, _ = stats.linregress(y, x)
         return slope * len(y) + intercept
 
 
