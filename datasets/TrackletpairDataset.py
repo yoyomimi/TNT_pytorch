@@ -29,7 +29,7 @@ class TrackletpairDataset(Dataset):
                  crop_data_root,
                  transform=None,
                  window_length=64,
-                 stride = 4,
+                 stride = 30,
                  is_train=True,):
 
         self.transform = transform
@@ -56,7 +56,9 @@ class TrackletpairDataset(Dataset):
             #                          video_name_2, track_id_2, start_frame_id_2, end_frame_id_2, connectivity(0 or 1)]
             for video_name in self.track_dict.keys():
                 for track_id in self.track_dict[video_name].keys():
-                    now_frame_list = sorted(list(map(int, self.track_dict[video_name][track_id][1])))
+                    class_name = self.track_dict[video_name][track_id][0]
+                    now_frame_list_ori = sorted(list(map(int, self.track_dict[video_name][track_id][1])))
+                    now_frame_list = now_frame_list_ori.copy()
                     if len(now_frame_list) < int(now_frame_list[-1] - now_frame_list[0] + 1): # not continous
                         continue
                     frame_window_list = []
@@ -64,30 +66,35 @@ class TrackletpairDataset(Dataset):
                     while len(now_frame_list) >= self.window_length:
                         frame_window_list.append([now_frame_list[0], now_frame_list[self.window_length-1]])
                         now_frame_list = now_frame_list[self.stride:]
+                    same_cls_track_list = []
+                    for track_id_new in self.track_dict[video_name].keys():
+                        if self.track_dict[video_name][track_id_new][0] == class_name:
+                            if track_id_new != track_id:
+                                same_cls_track_list.append(track_id_new)
+
                     for frame_window in frame_window_list:
-                        for i in range((frame_window[1]-frame_window[0])*4):
+                        remain_frame_window = frame_window_list.copy()
+                        remain_frame_window.remove(frame_window)
+                        for i in range(int((frame_window[1]-frame_window[0]) / 4)):
                             start_frame_id_1 = frame_window[0]
                             end_frame_id_1, start_frame_id_2, end_frame_id_2 = sorted(random.sample(range(frame_window[0]+1, frame_window[1]+1), 3))
                             
                             # write connected pair to tracklet_pair_path
                             pair_f.write(f'{video_name},{track_id},{start_frame_id_1},{end_frame_id_1},{video_name},{track_id},{start_frame_id_2},{end_frame_id_2},{1}\n')
-                            pair_count += 1                 
+                            pair_count += 1    
+ 
+                            for other_track_id in same_cls_track_list:
+                                # non connected pair in other track
+                                other_frame_window = sorted(list(map(int, self.track_dict[video_name][other_track_id][1])))
+                                if len(other_frame_window) < int(other_frame_window[-1] - other_frame_window[0] + 1): # not continous
+                                    continue
+                                if start_frame_id_1 >= other_frame_window[0] and end_frame_id_1 <= other_frame_window[-1]:
+                                    pair_f.write(f'{video_name},{other_track_id},{start_frame_id_1},{end_frame_id_1},{video_name},{track_id},{start_frame_id_2},{end_frame_id_2},{0}\n')
+                                    pair_count += 1 
+                                if start_frame_id_2 >= other_frame_window[0] and end_frame_id_2 <= other_frame_window[-1]:
+                                    pair_f.write(f'{video_name},{track_id},{start_frame_id_1},{end_frame_id_1},{video_name},{other_track_id},{start_frame_id_2},{end_frame_id_2},{0}\n')
+                                    pair_count += 1
 
-                            # non connected pair in other track
-                            other_video_name = random.sample(self.track_dict.keys(), 1)[0]
-                            other_track_id_set = set(self.track_dict[other_video_name].keys())
-                            if other_video_name == video_name:
-                                other_track_id_set = other_track_id_set - set(track_id)
-                            other_track_id = random.sample(list(other_track_id_set), 1)[0]
-                            other_frame_window = sorted(list(map(int, self.track_dict[other_video_name][other_track_id][1])))
-                            if len(other_frame_window) < int(other_frame_window[-1] - other_frame_window[0] + 1): # not continous
-                                continue
-                            if start_frame_id_1 >= other_frame_window[0] and end_frame_id_1 <= other_frame_window[-1]:
-                                pair_f.write(f'{other_video_name},{other_track_id},{start_frame_id_1},{end_frame_id_1},{video_name},{track_id},{start_frame_id_2},{end_frame_id_2},{0}\n')
-                                pair_count += 1 
-                            if start_frame_id_2 >= other_frame_window[0] and end_frame_id_2 <= other_frame_window[-1]:
-                                pair_f.write(f'{video_name},{track_id},{start_frame_id_1},{end_frame_id_1},{other_video_name},{other_track_id},{start_frame_id_2},{end_frame_id_2},{0}\n')
-                                pair_count += 1
             pair_f.close()
             print("Having written %d tracklet pairs" %(pair_count))
         
