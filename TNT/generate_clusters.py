@@ -112,7 +112,7 @@ if __name__ == '__main__':
             continue
         frame_id = int(jpg_path.split('.')[-2].split('/')[-1]) # start from 0
         # img:(min_size, max_size, 3), boxes:(obj_num, 4), labels:(obj_num,) numpy type<list> list of array(1)
-        img, crop_img, boxes, labels = run_fcos_det_example(cfg,
+        det_output = run_fcos_det_example(cfg,
             criterion,
             jpg_path,
             det_transform,
@@ -120,6 +120,9 @@ if __name__ == '__main__':
             ap_transform=ap_transform,
             crop_transform=crop_transform
         )
+        if det_output is None:
+            continue
+        img, crop_img, boxes, labels = det_output
         boxes[:, 2] = boxes[:, 2] - boxes[:, 0] # w
         boxes[:, 3] = boxes[:, 3] - boxes[:, 1] # h
         img = img.cuda(non_blocking=True)
@@ -199,7 +202,7 @@ if __name__ == '__main__':
             max_t = int(cluster_frame_range[cluster_id][1])
             if max_t - min_t + 1 > 5:
                 print(cluster_id, cluster_frame_range[cluster_id], class_dict[int(label)])
-                f_track.writelines(f'{cluster_frame_range[cluster_id][0]}, {cluster_frame_range[cluster_id][1]}, {class_dict[int(label)]}\n')
+                f_track.writelines(f'{int(cluster_frame_range[cluster_id][0])}, {int(cluster_frame_range[cluster_id][1])}, {class_dict[int(label)]}\n')
             for frame_id in range(min_t, max_t+1):
                 visualize_dict[frame_id][cluster_id] = dict(
                     loc = loc[frame_id],

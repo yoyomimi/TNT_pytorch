@@ -209,7 +209,9 @@ def run_fcos_det_example(cfg, criterion, jpg_path, transform, model, demo_frame=
     }
     crop_img = []
     new_img = []
-
+    
+    if boxes.size(0) == 0:
+        return None
     for i in range(boxes.size(0)):
         box = boxes[i]
         box[0:4:2] = box[0:4:2] / new_w * w
