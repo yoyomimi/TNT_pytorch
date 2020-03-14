@@ -77,11 +77,20 @@ def merge_det(det_dict, crop_im, linear_pred_thresh=5, coeff_norm_thresh=0.5, pr
         max_track_id = new_track_id[-1]
     
     # process the later frames, frame_id start from 0
+
     for i in range(min_frame+1, frame_num):
-        if i not in det_dict.keys() or i-1 not in det_dict.keys():
+        if i not in det_dict.keys():
             continue
-        pre_obj_num = det_dict[i-1].shape[0]
         now_obj_num = det_dict[i].shape[0]
+        if i-1 not in det_dict.keys() and now_obj_num > 0:
+            for track_id in range(max_track_id+1, max_track_id+now_obj_num+1):
+                track_dict[track_id] = np.zeros((frame_num, feat_size))-1 # set -1 for initial
+                track_dict[track_id][i] = det_dict[i][track_id-max_track_id-1][:-1]
+                new_track_id.append(track_id)
+            max_track_id = new_track_id[-1]
+            continue
+
+        pre_obj_num = det_dict[i-1].shape[0]
         pre_track_id = new_track_id.copy()
         new_track_id = []
         if now_obj_num == 0:
