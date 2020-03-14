@@ -35,7 +35,7 @@ def bbox_associate(overlap_mat, IOU_thresh):
     return idx1, idx2 # start from 0
 
 # wait to add in cfg: linear_pred_thresh, coeff_norm_thresh, pred_loc_iou_tresh, pred_use_F
-def merge_det(det_dict, crop_im, linear_pred_thresh=5, coeff_norm_thresh=0.15, pred_loc_iou_tresh=0.2, pred_F_mat=None):
+def merge_det(det_dict, crop_im, linear_pred_thresh=5, coeff_norm_thresh=0.5, pred_loc_iou_tresh=0.4, pred_F_mat=None):
     """merge det from the neighbour frame (based on frame_dist limitation) using emb_dist(?)
     
     Args:
@@ -61,7 +61,8 @@ def merge_det(det_dict, crop_im, linear_pred_thresh=5, coeff_norm_thresh=0.15, p
     """
     track_dict = {}
     frame_num = max(list([int(id) for id in det_dict.keys()])) + 1
-    now_obj_num, feat_size = det_dict[0].shape
+    min_frame = min(list([int(id) for id in det_dict.keys()]))
+    now_obj_num, feat_size = det_dict[min_frame].shape
     feat_size -= 1
     emb_size = feat_size - 4 - 1
 
@@ -70,13 +71,15 @@ def merge_det(det_dict, crop_im, linear_pred_thresh=5, coeff_norm_thresh=0.15, p
     max_track_id = -1
     for track_id in range(now_obj_num):
         track_dict[track_id] = np.zeros((frame_num, feat_size))-1 # set -1 for initial
-        track_dict[track_id][0] = det_dict[0][track_id][:-1]
+        track_dict[track_id][min_frame] = det_dict[min_frame][track_id][:-1]
         new_track_id.append(track_id)
     if len(new_track_id):
         max_track_id = new_track_id[-1]
     
     # process the later frames, frame_id start from 0
-    for i in range(1, frame_num):
+    for i in range(min_frame+1, frame_num):
+        if i not in det_dict.keys() or i-1 not in det_dict.keys():
+            continue
         pre_obj_num = det_dict[i-1].shape[0]
         now_obj_num = det_dict[i].shape[0]
         pre_track_id = new_track_id.copy()

@@ -8,6 +8,7 @@ import numpy as np
 import os
 import os.path as osp
 from tqdm import tqdm
+import time
 
 import cv2
 import torch
@@ -33,7 +34,7 @@ from tracklets.utils.utils import get_embeddings
 from tracklets.utils.utils import get_tracklet_pair_input_features
 
 from clusters.init_cluster import init_clustering
-from clusters.optimal_cluster import get_optimal_cluster
+from clusters.optimal_cluster import get_optimal_spfa
 from clusters.utils.cluster_utils import cluster_dict_processing
 from TNT.utils.merge_det import merge_det
 
@@ -63,7 +64,7 @@ args = parser.parse_args()
 
 if __name__ == '__main__':
     update_config(cfg, args)
-
+    f_track = open('data/tracjectory.txt', 'a')
     # detector
     detector = FCOS(cfg)
     assert cfg.MODEL.DETECTION_WEIGHTS != ''
@@ -103,7 +104,7 @@ if __name__ == '__main__':
         7: 'Tram',
         8: 'Misc',
     }
-    for label in range(1, cfg.DATASET.NUM_CLASSES+1):
+    for label in range(1, cfg.DATASET.NUM_CLASSES):
         det_result[label] = {}
         crop_im[label] = {}
     for i, jpg_path in tqdm(enumerate(jpg_paths)):
@@ -124,17 +125,18 @@ if __name__ == '__main__':
         img = img.cuda(non_blocking=True)
         img_embs = get_embeddings(emb, img).cpu().data.numpy()
         assert len(img_embs) == len(crop_img) == len(boxes) == len(labels)
-        for label in range(1, cfg.DATASET.NUM_CLASSES+1):
+        for label in range(1, cfg.DATASET.NUM_CLASSES):
             label_idx = sorted(list(np.where(labels==label)[0]))
             obj_num = len(label_idx)
             # {'frame_id': (obj_num, crop_min, crop_max, 3)}
             crop_im[label][frame_id] = crop_img[label_idx]
             # {'frame_id': (obj_num, emb_size+4+1+3) emb x y w h label(float) crop_index(array(1))}
-            det_result[label][frame_id] = np.zeros((obj_num, emb_size+4+1+1))
-            det_result[label][frame_id][:, :emb_size] = img_embs[label_idx]
-            det_result[label][frame_id][:, emb_size: emb_size+4] = boxes[label_idx]
-            det_result[label][frame_id][:, emb_size+4] = labels[label_idx]
-            det_result[label][frame_id][:, emb_size+5:] = range(obj_num)
+            if obj_num:
+                det_result[label][frame_id] = np.zeros((obj_num, emb_size+4+1+1)) - 1
+                det_result[label][frame_id][:, :emb_size] = img_embs[label_idx]
+                det_result[label][frame_id][:, emb_size: emb_size+4] = boxes[label_idx]
+                det_result[label][frame_id][:, emb_size+4] = labels[label_idx]
+                det_result[label][frame_id][:, emb_size+5:] = np.array(range(obj_num)).reshape(-1, 1)
     
     # init cluster
     tnt_model = get_model(cfg, cfg.MODEL.FILE, cfg.MODEL.NAME)
@@ -142,7 +144,10 @@ if __name__ == '__main__':
         load_eval_model(cfg.MODEL.RESUME_PATH, tnt_model)
     tnt_model.cuda().eval()
     cluster_per_label = {}
-    for label in range(1, cfg.DATASET.NUM_CLASSES+1):
+    for label in range(1, cfg.DATASET.NUM_CLASSES):
+        if len(det_result[label]) == 0:
+            continue
+        start = time.time()
         # use coarse constriant to get coarse track dict
         print("processing label: ", class_dict[label])
         print("det num: ", len(det_result[label]))
@@ -151,11 +156,9 @@ if __name__ == '__main__':
         crop_im[label].clear()
     
         cluster_dict, tracklet_time_range, coarse_tracklet_connects, tracklet_cost_dict = init_clustering(tnt_model, coarse_track_dict)
-        write_dict_to_json(coarse_tracklet_connects, 'data/' + class_dict[label] + '_coarse_tracklet_connects.json')
-        write_dict_to_json(tracklet_cost_dict, 'data/' + class_dict[label] + '_tracklet_cost_dict.json')
 
         # graph algorithm adjusts the cluster
-        cluster_list, min_cost = get_optimal_cluster(coarse_tracklet_connects, tracklet_cost_dict)
+        min_cost, cluster_list = get_optimal_spfa(coarse_tracklet_connects, tracklet_cost_dict)
 
         # post processing
         for cluster in cluster_list:
@@ -163,7 +166,10 @@ if __name__ == '__main__':
             for track_id in cluster:
                 if track_id == cluster_id:
                     continue
-                cluster_dict.pop(track_id)
+                if track_id in cluster_dict.keys():
+                    cluster_dict.pop(track_id)
+                if cluster_id not in cluster_dict.keys():
+                    cluster_dict[cluster_id] = []
                 cluster_dict[cluster_id].append(track_id)
         # write_dict_to_json(cluster_dict, 'data/new_cluster_dict.json')
     
@@ -173,7 +179,9 @@ if __name__ == '__main__':
 
     # visualize based on cluster_id, locations and labels. One color for one cluster.
     visualize_dict_per_label = {} # frame_id: {track_id: {label: , loc: [xmin, ymin, xmax, ymax]}}
-    for label in range(1, cfg.DATASET.NUM_CLASSES+1):
+    for label in range(1, cfg.DATASET.NUM_CLASSES):
+        if label not in cluster_per_label.keys():
+            continue
         cluster_feat_dict, cluster_frame_range = cluster_per_label[label]
         visualize_dict_per_label[label] = {}
         visualize_dict = visualize_dict_per_label[label]
@@ -189,12 +197,17 @@ if __name__ == '__main__':
             # visualize info with label and loc
             min_t = int(cluster_frame_range[cluster_id][0])
             max_t = int(cluster_frame_range[cluster_id][1])
+            if max_t - min_t + 1 > 5:
+                print(cluster_id, cluster_frame_range[cluster_id], class_dict[int(label)])
+                f_track.writelines(f'{cluster_frame_range[cluster_id][0]}, {cluster_frame_range[cluster_id][1]}, {class_dict[int(label)]}\n')
             for frame_id in range(min_t, max_t+1):
                 visualize_dict[frame_id][cluster_id] = dict(
                     loc = loc[frame_id],
-                    class_id = int(label)
+                    class_id = class_dict[int(label)]
                 )
+    print('time: ', time.time()-start, 's')
     write_dict_to_json(visualize_dict_per_label, 'data/visualize.json')
+    f_track.close()
 
 
 

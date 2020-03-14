@@ -25,7 +25,7 @@ MODEL:
   APPEARANCE:
     EMB_SIZE: 512
     WEIGHTS: '/mnt/ht/students/cmf/TNT_pytorch/work_dirs/facenet_triplet_appearance/2020-03-11-05-18/InceptionResnetV1_epoch001_iter024000_checkpoint.pth'
-  RESUME_PATH: '/mnt/ht/students/cmf/TNT_pytorch/work_dirs/trackletpair_connectivity/2020-03-11-08-29/TrackletConnectivity_epoch000_iter014000_checkpoint.pth'
+  RESUME_PATH: '/mnt/ht/students/cmf/TNT_pytorch/work_dirs/trackletpair_connectivity/2020-03-13-02-08/TrackletConnectivity_epoch000_iter008000_checkpoint.pth'
   DETECTION_WEIGHTS: '/mnt/ht/students/cmf/TNT_pytorch/work_dirs/fcos_detector/2020-03-10-05-51/FCOS_epoch012_iter024000_checkpoint.pth'
   BACKBONE:
     PRETRAINED: False
@@ -47,8 +47,8 @@ MODEL:
 TEST:
   TEST_SIZE: (352, 1216) # min_size, max_size
   CROP_SZIE: (91, 182)
-  NMS_THRESHOLD: 0.1
-  SCORE_THRESHOLD: 0.7
+  NMS_THRESHOLD: 0.6
+  SCORE_THRESHOLD: 0.3
   AP_IOU: 0.5
   MAX_PER_IMG: 100
   NMS_PRE: 1000

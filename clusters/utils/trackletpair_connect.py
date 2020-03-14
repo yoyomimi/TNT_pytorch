@@ -36,6 +36,8 @@ def pred_connect_with_fusion(model, coarse_track_dict, tracklet_pair, emb_size, 
     for i in tqdm(range(int(len(tracklet_pair) / max_bs) + 1)):
         if i == int(len(tracklet_pair) / max_bs):
             bs = len(tracklet_pair) % max_bs
+            if bs == 0:
+                break
         else:
             bs = max_bs
         tracklet_pair_features_input = np.zeros((bs, window_len, emb_size+4, 3)) # [loc emb]
