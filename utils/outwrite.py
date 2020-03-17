@@ -44,7 +44,7 @@ def write_to_result(visual_dict, output_name):
             track_id_new = len(track_id_dict)
             track_id_dict[track_id] = track_id_new
         track_id = track_id_dict[track_id]
-        f.writelines(f'{frame_id},{track_id},{class_name},{-1},{-1},{-1},{xmin},{ymin},{xmax},{ymax},{-1},{-1},{-1},{-1},{-1},{-1},{-1},{1}\n')
+        f.writelines(f'{frame_id} {track_id} {class_name} {-1} {-1} {-1} {xmin} {ymin} {xmax} {ymax} {-1} {-1} {-1} {-1} {-1} {-1} {-1} {1}\n')
     f.close()
 
     return len(track_id_dict)
@@ -129,7 +129,7 @@ def write_to_img(result_file, frame_root, test_output_dir, track_num):
     path = {}
     colors = getDistinguishableColors(5*track_num)
     for line in lines:
-        info = line.split(',')
+        info = line.split(' ')
         frame_id = info[0]
         track_id = int(info[1])
         class_name = info[2]
@@ -169,9 +169,9 @@ def write_to_img(result_file, frame_root, test_output_dir, track_num):
 if __name__ == "__main__":
     import json
     cluster_dict = {}
-    with open('data/visualize_0012.json', 'r') as f:
+    with open('data/visualize_0010.json', 'r') as f:
         visual_dict = json.load(f)  
     
-    track_num = write_to_result(visual_dict, '0012_pred.txt')
-    write_to_img('0012_pred.txt', 'data/training/left_02/images/0012', 'test_out', track_num)
+    track_num = write_to_result(visual_dict, '0010_pred.txt')
+    write_to_img('0010_pred.txt', 'data/training/left_02/images/0010', 'test_out', track_num)
     
