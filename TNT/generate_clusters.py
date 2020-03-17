@@ -181,13 +181,13 @@ if __name__ == '__main__':
         cluster_per_label[label] = [cluster_feat_dict, cluster_frame_range]
 
     # visualize based on cluster_id, locations and labels. One color for one cluster.
-    visualize_dict_per_label = {} # frame_id: {track_id: {label: , loc: [xmin, ymin, xmax, ymax]}}
+    visualize_dict_per_label = {}
     for label in range(1, cfg.DATASET.NUM_CLASSES):
         if label not in cluster_per_label.keys():
             continue
         cluster_feat_dict, cluster_frame_range = cluster_per_label[label]
         visualize_dict_per_label[label] = {}
-        visualize_dict = visualize_dict_per_label[label]
+        visualize_dict = visualize_dict_per_label[label]  # frame_id: {track_id: {label: , loc: [xmin, ymin, xmax, ymax]}}
 
         frame_len = len(cluster_feat_dict[0])
         for frame_id in range(frame_len):
