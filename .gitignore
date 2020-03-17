@@ -138,3 +138,4 @@ crop_det/
 get-pip.py
 *_pred.txt
 test_out/
+*.mp4
