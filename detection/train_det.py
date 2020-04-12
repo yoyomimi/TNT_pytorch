@@ -91,7 +91,17 @@ def main_per_worker(process_index, ngpus_per_node, args):
     # logger.info(pprint.pformat(args))
     # logger.info(cfg)
 
-    model = get_model(cfg, cfg.MODEL.FILE, cfg.MODEL.NAME)  
+    model = get_model(cfg, cfg.MODEL.FILE, cfg.MODEL.NAME)
+
+    # # debug
+    # from torch.autograd import Variable
+    # x = Variable(torch.randn(2, 3, 1216, 352)).cuda()
+    # model = model.cuda()
+    # out = model(x) # roi
+    # for i in out[1:]:
+    #     print(i.shape)
+
+    """
     optimizer = get_optimizer(cfg, model)
     model, optimizer, last_iter = load_checkpoint(cfg, model, optimizer)
     lr_scheduler = get_lr_scheduler(cfg, optimizer, last_iter)
@@ -164,6 +174,7 @@ def main_per_worker(process_index, ngpus_per_node, args):
 
     while True:
         Trainer.train(train_loader, eval_loader)
+    """
 
 
 if __name__ == '__main__':

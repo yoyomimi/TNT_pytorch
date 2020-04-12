@@ -161,3 +161,33 @@ def multiclass_nms(multi_bboxes,
         labels = multi_bboxes.new_zeros((0, ), dtype=torch.long)
         
     return bboxes, labels
+
+def bbox2roi(bbox_list):
+    """Convert a list of bboxes to roi format.
+
+    Args:
+        bbox_list (list[Tensor]): a list of bboxes corresponding to a batch
+            of images.
+
+    Returns:
+        Tensor: shape (n, 5), [batch_ind, x1, y1, x2, y2]
+    """
+    rois_list = []
+    for img_id, bboxes in enumerate(bbox_list):
+        if bboxes.size(0) > 0:
+            img_inds = bboxes.new_full((bboxes.size(0), 1), img_id)
+            rois = torch.cat([img_inds, bboxes[:, :4]], dim=-1)
+        else:
+            rois = bboxes.new_zeros((0, 5))
+        rois_list.append(rois)
+    rois = torch.cat(rois_list, 0)
+    return rois
+
+def roi2bbox(rois):
+    bbox_list = []
+    img_ids = torch.unique(rois[:, 0].cpu(), sorted=True)
+    for img_id in img_ids:
+        inds = (rois[:, 0] == img_id.item())
+        bbox = rois[inds, 1:]
+        bbox_list.append(bbox)
+    return bbox_list
